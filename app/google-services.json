@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "823543176526",
+    "project_id": "chatbotauto-6f49d",
+    "storage_bucket": "chatbotauto-6f49d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:823543176526:android:1dc6e1f056d15edbbed21f",
+        "android_client_info": {
+          "package_name": "com.example.autochat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTvx0bTEGzHL4Kyy5TkgmsNgWDhfqCAQg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/chatFragment">
+
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.autochat.ui.phone.fragment.ChatFragment"
+        android:label="Chat">
+        <action
+            android:id="@+id/action_chat_to_history"
+            app:destination="@id/historyFragment"/>
+        <action
+            android:id="@+id/action_chat_to_profile"
+            app:destination="@id/profileFragment"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="com.example.autochat.ui.phone.fragment.HistoryFragment"
+        android:label="Lich su">
+        <action
+            android:id="@+id/action_history_to_detail"
+            app:destination="@id/sessionDetailFragment"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/sessionDetailFragment"
+        android:name="com.example.autochat.ui.phone.fragment.SessionDetailFragment"
+        android:label="Chi tiet">
+        <argument
+            android:name="sessionId"
+            app:argType="string"/>
+        <argument
+            android:name="sessionTitle"
+            app:argType="string"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.autochat.ui.phone.fragment.ProfileFragment"
+        android:label="Ho so"/>
+
+</navigation>

@@ -1,0 +1,135 @@
+package com.example.autochat.ui.car
+
+import androidx.car.app.CarContext
+import androidx.car.app.Screen
+import androidx.car.app.model.*
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import com.example.autochat.AppState
+
+class VoiceSearchScreen(
+    carContext: CarContext,
+    private val chatScreen: MyChatScreen
+) : Screen(carContext) {
+
+    private var displayText = "Dang nghe...\nHay noi cau hoi cua ban"
+    private var useVoiceMode = true
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    // ✅ Giới hạn invalidate tối đa 1 lần/giây để tránh crash 5 templates
+    private var lastInvalidateTime = 0L
+    private val MIN_INVALIDATE_INTERVAL = 1000L
+
+    init {
+        AppState.voiceScreen = this
+        startVoiceService()
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                AppState.voiceScreen = null
+                stopVoiceService()
+            }
+        })
+    }
+
+    override fun onGetTemplate(): Template {
+        return if (useVoiceMode) buildVoiceTemplate()
+        else buildSearchTemplate()
+    }
+
+    private fun buildVoiceTemplate(): Template {
+        return MessageTemplate.Builder(displayText)
+            .setTitle("Dang nghe")
+            .setHeaderAction(Action.BACK)
+            .addAction(
+                Action.Builder()
+                    .setTitle("Ban phim")
+                    .setOnClickListener {
+                        useVoiceMode = false
+                        stopVoiceService()
+                        safeInvalidate()
+                    }
+                    .build()
+            )
+            .addAction(
+                Action.Builder()
+                    .setTitle("Thu lai")
+                    .setOnClickListener {
+                        displayText = "Dang nghe...\nHay noi cau hoi cua ban"
+                        safeInvalidate()
+                        stopVoiceService()
+                        handler.postDelayed({ startVoiceService() }, 300)
+                    }
+                    .build()
+            )
+            .build()
+    }
+
+    private fun buildSearchTemplate(): Template {
+        return SearchTemplate.Builder(
+            object : SearchTemplate.SearchCallback {
+                override fun onSearchTextChanged(searchText: String) {}
+                override fun onSearchSubmitted(searchText: String) {
+                    if (searchText.isNotBlank()) chatScreen.addUserMessage(searchText)
+                    screenManager.pop()
+                }
+            }
+        )
+            .setInitialSearchText("")
+            .setSearchHint("Go hoac noi cau hoi...")
+            .setHeaderAction(Action.BACK)
+            .setShowKeyboardByDefault(true)
+            .build()
+    }
+
+    // ✅ Chỉ invalidate nếu đủ thời gian tránh crash 5 templates
+    private fun safeInvalidate() {
+        val now = System.currentTimeMillis()
+        if (now - lastInvalidateTime >= MIN_INVALIDATE_INTERVAL) {
+            lastInvalidateTime = now
+            invalidate()
+        }
+    }
+
+    fun updateStatus(status: String) {
+        handler.post {
+            android.util.Log.e("VOICE_SCREEN", "updateStatus: $status")
+            displayText = status
+            safeInvalidate()
+        }
+    }
+
+    fun updatePartial(text: String) {
+        handler.post {
+            android.util.Log.e("VOICE_SCREEN", "updatePartial: $text")
+            if (text.isNotBlank()) {
+                displayText = "Dang nghe...\n\"$text\""
+                safeInvalidate()
+            }
+        }
+    }
+
+    fun onVoiceResult(text: String) {
+        handler.post {
+            android.util.Log.e("VOICE_SCREEN", "onVoiceResult: $text")
+            if (text.isNotBlank()) chatScreen.addUserMessage(text)
+            screenManager.pop()
+        }
+    }
+
+    fun onTimeout() {
+        handler.post { screenManager.pop() }
+    }
+
+    private fun startVoiceService() {
+        val intent = android.content.Intent(carContext, com.example.autochat.service.VoiceService::class.java).apply {
+            action = com.example.autochat.service.VoiceService.ACTION_START
+        }
+        carContext.startForegroundService(intent)
+    }
+
+    private fun stopVoiceService() {
+        carContext.stopService(
+            android.content.Intent(carContext, com.example.autochat.service.VoiceService::class.java)
+        )
+    }
+}

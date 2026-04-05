@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Autochat</string>
+    <string name="fragment_history_name">Lịch sử trò truyện</string>
+    <string name="fragment_history_rong">Chưa có lịch sử nào</string>
+</resources>
