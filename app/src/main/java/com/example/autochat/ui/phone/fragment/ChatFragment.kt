@@ -11,17 +11,20 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.autochat.AppState
+import com.example.autochat.R
 import com.example.autochat.databinding.FragmentChatBinding
 import com.example.autochat.di.ChatEntryPoint
 import com.example.autochat.domain.repository.ChatRepository
 import com.example.autochat.ui.phone.adapter.ChatMessageAdapter
 import com.example.autochat.websocket.WebSocketManager
-import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -33,7 +36,10 @@ class ChatFragment : Fragment() {
 
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
+
+    // Adapter nhận callback khi nhấn vào bài báo trong news list
     private lateinit var adapter: ChatMessageAdapter
+
     private var loadMessagesJob: Job? = null
     private var observeJob: Job? = null
     private var realtimeJob: Job? = null
@@ -62,9 +68,13 @@ class ChatFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated (view, savedInstanceState)
+        super.onViewCreated(view, savedInstanceState)
 
-        adapter = ChatMessageAdapter()
+        // ── Khởi tạo adapter với callback mở chi tiết bài báo ──
+        adapter = ChatMessageAdapter { articleId, title, description ->
+            openArticleDetail(articleId, title, description)
+        }
+
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@ChatFragment.adapter
@@ -89,16 +99,34 @@ class ChatFragment : Fragment() {
             (requireActivity() as? com.example.autochat.ui.phone.MainActivity)?.openDrawer()
         }
 
-        // Connect WebSocket
         if (AppState.currentUserId.isNotEmpty()) {
-            Log.d("ChatFragment", "Connecting WebSocket for user: ${AppState.currentUserId}")
             webSocketManager.connect(AppState.currentUserId)
         }
 
-        // Load session hiện tại
         AppState.currentSession?.let { session ->
             binding.tvSessionTitle.text = session.title
             loadSession(session.id)
+        }
+    }
+
+    /**
+     * Mở ArticleDetailFragment khi nhấn vào bài báo trong danh sách.
+     * Truyền articleId để fragment tự fetch chi tiết từ repository.
+     */
+    private fun openArticleDetail(articleId: Int?, title: String, description: String) {
+        val bundle = bundleOf(
+            "articleId" to (articleId ?: -1),
+            "title" to title,
+            "description" to description
+        )
+        try {
+            findNavController().navigate(R.id.action_chat_to_articleDetail, bundle)
+        } catch (e: Exception) {
+            // Fallback nếu chưa có action trong nav_graph
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.navHostFragment, ArticleDetailFragment().apply { arguments = bundle })
+                .addToBackStack("article_detail")
+                .commit()
         }
     }
 
@@ -113,7 +141,6 @@ class ChatFragment : Fragment() {
         binding.btnSend.setOnClickListener { sendMessage() }
         binding.btnMic.setOnClickListener { startVoiceInput() }
 
-        // Typing indicator with debounce
         binding.etMessage.addTextChangedListener(object : TextWatcher {
             private var isTyping = false
 
@@ -124,8 +151,6 @@ class ChatFragment : Fragment() {
                 if (newTyping != isTyping) {
                     isTyping = newTyping
                     webSocketManager.sendTyping(isTyping)
-
-                    // Auto stop typing after 2 seconds
                     if (isTyping) {
                         typingJob?.cancel()
                         typingJob = lifecycleScope.launch {
@@ -148,47 +173,37 @@ class ChatFragment : Fragment() {
             chatRepository.realtimeEvents.collect { event ->
                 when (event) {
                     is ChatRepository.RealtimeEvent.NewMessage -> {
-                        // Scroll to bottom
                         binding.recyclerView.post {
                             binding.recyclerView.scrollToPosition(adapter.itemCount - 1)
                         }
                     }
-
                     is ChatRepository.RealtimeEvent.SessionDeleted -> {
                         if (event.sessionId == AppState.currentSessionId) {
                             Toast.makeText(requireContext(), "Đoạn chat đã bị xóa", Toast.LENGTH_SHORT).show()
                             requireActivity().onBackPressedDispatcher.onBackPressed()
                         }
                     }
-
                     is ChatRepository.RealtimeEvent.MessagesDeleted -> {
                         if (event.sessionId == AppState.currentSessionId) {
                             Toast.makeText(requireContext(), "Tin nhắn đã bị xóa", Toast.LENGTH_SHORT).show()
                         }
                     }
-
                     is ChatRepository.RealtimeEvent.Typing -> {
                         if (event.userId != AppState.currentUserId) {
                             binding.tvTyping.visibility = if (event.isTyping) View.VISIBLE else View.GONE
-                            if (event.isTyping) {
-                                binding.tvTyping.text = "Đang nhập..."
-                            }
+                            if (event.isTyping) binding.tvTyping.text = "Đang nhập..."
                         }
                     }
-
                     is ChatRepository.RealtimeEvent.Connected -> {
                         binding.tvConnectionStatus.visibility = View.GONE
                     }
-
                     is ChatRepository.RealtimeEvent.Disconnected -> {
                         binding.tvConnectionStatus.visibility = View.VISIBLE
                         binding.tvConnectionStatus.text = "Đang kết nối lại..."
                     }
-
                     is ChatRepository.RealtimeEvent.Error -> {
                         Toast.makeText(requireContext(), "Lỗi: ${event.error}", Toast.LENGTH_SHORT).show()
                     }
-
                     else -> {}
                 }
             }
@@ -199,14 +214,12 @@ class ChatFragment : Fragment() {
         val text = binding.etMessage.text.toString().trim()
         if (text.isEmpty()) return
         binding.etMessage.setText("")
-
-        // Stop typing indicator
         webSocketManager.sendTyping(false)
 
         lifecycleScope.launch {
             try {
                 binding.progressBar.visibility = View.VISIBLE
-                val result = chatRepository.sendMessage(AppState.currentSessionId, text)
+                val result = chatRepository.sendMessage(AppState.currentSessionId, text,false, null)
 
                 if (AppState.currentSessionId != result.sessionId) {
                     AppState.currentSessionId = result.sessionId
@@ -241,7 +254,6 @@ class ChatFragment : Fragment() {
         loadMessagesJob = lifecycleScope.launch {
             try {
                 binding.progressBar.visibility = View.VISIBLE
-
                 observeJob = lifecycleScope.launch {
                     chatRepository.getMessagesFlow(AppState.currentSessionId!!).collect { msgList ->
                         adapter.submitList(msgList)
@@ -261,25 +273,15 @@ class ChatFragment : Fragment() {
     }
 
     fun loadSession(sessionId: String) {
-        Log.d("ChatFragment", "loadSession: $sessionId, currentSessionId=${AppState.currentSessionId}")
-
         loadMessagesJob?.cancel()
         observeJob?.cancel()
 
-        // ✅ LEAVE SESSION CŨ NẾU KHÁC
-        AppState.currentSessionId?.let { oldSessionId ->
-            if (oldSessionId != sessionId) {
-                Log.d("ChatFragment", "Leaving old session: $oldSessionId")
-                webSocketManager.leaveSession(oldSessionId)
-            }
+        AppState.currentSessionId?.let { oldId ->
+            if (oldId != sessionId) webSocketManager.leaveSession(oldId)
         }
 
         adapter.submitList(emptyList())
-
-        // ✅ JOIN SESSION MỚI
-        Log.d("ChatFragment", "Joining new session: $sessionId")
         webSocketManager.joinSession(sessionId)
-
         loadMessages()
     }
 
@@ -300,7 +302,8 @@ class ChatFragment : Fragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_SPEECH && resultCode == android.app.Activity.RESULT_OK) {
-            val text = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.getOrNull(0) ?: return
+            val text = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.getOrNull(0) ?: return
             if (text.isNotEmpty()) {
                 binding.etMessage.setText(text)
                 sendMessage()
@@ -310,16 +313,7 @@ class ChatFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-
-        // ✅ LEAVE SESSION KHI FRAGMENT BỊ HỦY, NHƯNG KHÔNG DISCONNECT WEBSOCKET
-        AppState.currentSessionId?.let { sessionId ->
-            Log.d("ChatFragment", "onDestroyView: leaving session $sessionId")
-            webSocketManager.leaveSession(sessionId)
-        }
-
-        // ❌ KHÔNG GỌI disconnect() VÌ CÒN CÓ THỂ DÙNG LẠI SAU
-        // webSocketManager.disconnect()
-
+        AppState.currentSessionId?.let { webSocketManager.leaveSession(it) }
         loadMessagesJob?.cancel()
         observeJob?.cancel()
         realtimeJob?.cancel()

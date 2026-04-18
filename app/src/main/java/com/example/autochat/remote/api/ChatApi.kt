@@ -1,6 +1,7 @@
 package com.example.autochat.remote.api
 
 import com.example.autochat.remote.dto.request.ChatRequest
+import com.example.autochat.remote.dto.response.ArticleResponse
 import com.example.autochat.remote.dto.response.ChatResponse
 import com.example.autochat.remote.dto.response.MessageResponse
 import com.example.autochat.remote.dto.response.SessionResponse
@@ -45,4 +46,14 @@ interface ChatApi {
         @Path("sessionId") sessionId: String,
         @Body request: Map<String, String>
     ): Response<Unit>
+    @GET("chat/article/{articleId}")
+    suspend fun getArticle(
+        @Path("articleId") articleId: Int
+    ): Response<ArticleResponse>
+
+    @POST("chat/sessions/{id}/init-rag")
+    suspend fun initRagSession(
+        @Header("Authorization") token: String,
+        @Path("id") sessionId: String
+    ) : Response<Unit>
 }

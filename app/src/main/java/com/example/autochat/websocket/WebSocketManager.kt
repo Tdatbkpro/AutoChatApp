@@ -65,7 +65,7 @@ class WebSocketManager @Inject constructor() {
 
         currentUserId = userId
         currentDeviceId = UUID.randomUUID().toString().substring(0, 8)
-        val url = "ws://10.177.243.218:8000/ws/$userId/$currentDeviceId"
+        val url = "ws://1932wp3f-8000.asse.devtunnels.ms/ws/$userId/$currentDeviceId"
 
         Log.d("WebSocketManager", "🔌 Connecting to $url")
 

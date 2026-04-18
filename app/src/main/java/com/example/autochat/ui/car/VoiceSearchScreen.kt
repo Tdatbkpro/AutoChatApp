@@ -6,10 +6,13 @@ import androidx.car.app.model.*
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.autochat.AppState
+import com.example.autochat.domain.model.Message
 
 class VoiceSearchScreen(
     carContext: CarContext,
-    private val chatScreen: MyChatScreen
+    private val chatScreen: MyChatScreen,
+    private val botMessage: String?,
+    private val onFinished: (() -> Unit)? = null
 ) : Screen(carContext) {
 
     private var displayText = "Dang nghe...\nHay noi cau hoi cua ban"
@@ -38,11 +41,11 @@ class VoiceSearchScreen(
 
     private fun buildVoiceTemplate(): Template {
         return MessageTemplate.Builder(displayText)
-            .setTitle("Dang nghe")
+            .setTitle("Đang nghe")
             .setHeaderAction(Action.BACK)
             .addAction(
                 Action.Builder()
-                    .setTitle("Ban phim")
+                    .setTitle("Bàn Phím")
                     .setOnClickListener {
                         useVoiceMode = false
                         stopVoiceService()
@@ -52,7 +55,7 @@ class VoiceSearchScreen(
             )
             .addAction(
                 Action.Builder()
-                    .setTitle("Thu lai")
+                    .setTitle("Thu lại")
                     .setOnClickListener {
                         displayText = "Dang nghe...\nHay noi cau hoi cua ban"
                         safeInvalidate()
@@ -69,13 +72,16 @@ class VoiceSearchScreen(
             object : SearchTemplate.SearchCallback {
                 override fun onSearchTextChanged(searchText: String) {}
                 override fun onSearchSubmitted(searchText: String) {
-                    if (searchText.isNotBlank()) chatScreen.addUserMessage(searchText)
-                    screenManager.pop()
+                    if (searchText.isNotBlank()) chatScreen.addUserMessage(searchText, botMessage=botMessage);
+
+                            screenManager.pop()
+
                 }
+
             }
         )
             .setInitialSearchText("")
-            .setSearchHint("Go hoac noi cau hoi...")
+            .setSearchHint("Gõ hoặc ấn mic nói câu hỏi...")
             .setHeaderAction(Action.BACK)
             .setShowKeyboardByDefault(true)
             .build()
@@ -110,14 +116,21 @@ class VoiceSearchScreen(
 
     fun onVoiceResult(text: String) {
         handler.post {
-            android.util.Log.e("VOICE_SCREEN", "onVoiceResult: $text")
-            if (text.isNotBlank()) chatScreen.addUserMessage(text)
+            if (text.isNotBlank()) chatScreen.addUserMessage(text, botMessage = botMessage)
+
+            // ✅ Luôn pop màn hình trước khi gọi callback
             screenManager.pop()
+
+            // Sau đó mới gọi callback (nếu có)
+            onFinished?.invoke()
         }
     }
 
     fun onTimeout() {
-        handler.post { screenManager.pop() }
+        handler.post {
+            screenManager.pop()
+            onFinished?.invoke()
+        }
     }
 
     private fun startVoiceService() {

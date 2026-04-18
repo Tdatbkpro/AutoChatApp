@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Chi tiết bài báo trên điện thoại.
+    Dùng bởi ArticleDetailFragment.
+    IDs: toolbar, scrollView, tvTitle, tvMeta, tvDescription,
+         tvContent, tvSourceLink, progressBar, fabTts
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0F">
+
+    <!-- AppBar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#12121A"
+        app:elevation="4dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#12121A"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="#AAAACC"
+            app:titleTextColor="#FFFFFF"
+            app:title="Chi tiết bài báo" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Scroll content -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Tiêu đề bài báo -->
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
+                android:lineSpacingMultiplier="1.35" />
+
+            <!-- Meta: ngày • danh mục -->
+            <TextView
+                android:id="@+id/tvMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="#888899"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="14dp"
+                android:background="#2A2A40" />
+
+            <!-- Sapo / description (in nghiêng, nổi bật) -->
+            <TextView
+                android:id="@+id/tvDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#C0C0D8"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:lineSpacingMultiplier="1.5"
+                android:textStyle="italic"
+                android:paddingStart="10dp"
+                android:background="@drawable/bg_description_bar"
+                android:visibility="gone" />
+
+            <!-- Nội dung bài (text đã clean) -->
+            <TextView
+                android:id="@+id/tvContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="#D0D0E8"
+                android:textSize="15sp"
+                android:lineSpacingMultiplier="1.65"
+                android:letterSpacing="0.01" />
+
+            <!-- Link mở bài gốc -->
+            <TextView
+                android:id="@+id/tvSourceLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="🔗 Đọc bài gốc"
+                android:textColor="#64B5F6"
+                android:textSize="14sp"
+                android:paddingVertical="8dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone" />
+
+            <!-- Spacer bottom (tránh FAB che nội dung) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="80dp" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Loading spinner (hiện khi đang fetch) -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:indeterminateTint="#4A90E2" />
+
+    <!-- FAB: Đọc to (TTS) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabTts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:src="@android:drawable/ic_media_play"
+        android:contentDescription="Đọc bài báo"
+        app:backgroundTint="#1A3A6A"
+        app:tint="#64B5F6"
+        app:elevation="6dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

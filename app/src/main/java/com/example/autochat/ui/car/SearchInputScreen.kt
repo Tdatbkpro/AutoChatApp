@@ -19,10 +19,10 @@ class SearchInputScreen(
 
                 override fun onSearchSubmitted(searchText: String) {
                     if (searchText.isNotBlank()) {
-                        chatScreen.addUserMessage(searchText)
+//                        chatScreen.addUserMessage(searchText)
                     }
                     screenManager.pop()
-                    screenManager.pop()
+//                    screenManager.pop()
                 }
             }
         )

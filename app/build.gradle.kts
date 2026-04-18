@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")            // ✅ Đúng cú pháp KTS
+    id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
 }
@@ -38,9 +38,8 @@ android {
         viewBinding = true
         dataBinding = true
     }
-
-
 }
+
 kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
@@ -56,16 +55,22 @@ dependencies {
 
     // Android Auto
     implementation("androidx.car.app:app:1.4.0")
-    implementation("androidx.media:media:1.7.0")
+    implementation("androidx.media:media:1.7.1")
+
+    implementation("androidx.media3:media3-session:1.3.1")
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-common:1.3.1")
+    implementation("com.google.guava:guava:33.0.0-android")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
 
     // Room
-//    implementation("androidx.room:room-runtime:2.6.1")
-//    implementation("androidx.room:room-ktx:2.6.1")
-//    "kapt"("androidx.room:room-compiler:2.6.1") // ✅ Đúng cú pháp KTS
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
@@ -73,14 +78,8 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Hilt
-    // Hilt
     implementation("com.google.dagger:hilt-android:2.51")
-    "kapt"("com.google.dagger:hilt-compiler:2.51")
-
-    // Firebase BOM
-//    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
-//    implementation("com.google.firebase:firebase-firestore-ktx")
-//    implementation("com.google.firebase:firebase-auth-ktx")
+    kapt("com.google.dagger:hilt-compiler:2.51")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
@@ -101,16 +100,11 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
 
-// ViewModel
+    // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.fragment:fragment-ktx:1.7.0")
 }
 
-// ✅ Đúng cú pháp KTS
-extensions.configure<org.jetbrains.kotlin.gradle.plugin.KaptExtension> {
-    correctErrorTypes = true
-}
 kapt {
     correctErrorTypes = true
 }

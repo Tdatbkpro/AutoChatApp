@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -7,10 +8,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
 
     <application
         android:networkSecurityConfig="@xml/network_security_config"
         android:name=".AutoChatApplication"
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="AI Chatbot"
@@ -60,20 +66,64 @@
             android:name=".ui.phone.HostActivity"
             android:exported="false"
             android:theme="@style/Theme.MaterialComponents.CompactMenu" />
-
+<!--        <service-->
+<!--            android:name=".service.MyMediaLibraryService"-->
+<!--            android:exported="true"-->
+<!--            android:foregroundServiceType="mediaPlayback"-->
+<!--            tools:ignore="ForegroundServicePermission">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="androidx.media3.session.MediaLibraryService"-->
+<!--                    tools:ignore="ForegroundServicePermission" />-->
+<!--                <action android:name="android.media.browse.MediaBrowserService" />-->
+<!--            </intent-filter>-->
+<!--        </service>-->
         <service
-            android:name=".ui.car.MyCarAppService"
-            android:exported="true">
+            android:name=".ui.media.AutoChatMediaService"
+            android:label="Đạt"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ForegroundServicePermission">
             <intent-filter>
-                <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.POI" />
+                <action android:name="androidx.media3.session.MediaLibraryService"/>
+                <action android:name="android.media.browse.MediaBrowserService"/>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
             </intent-filter>
+            <meta-data
+                android:name="androidx.media3.session.MediaLibraryService.supportedContentTypes"
+                android:value="2"/>
         </service>
 
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
+
+                <service
+                    android:name=".ui.car.MyCarAppService"
+                    android:exported="true">
+                    <intent-filter>
+                        <action android:name="androidx.car.app.CarAppService" />
+                        <category android:name="androidx.car.app.category.MEDIA" />
+                    </intent-filter>
+                </service>
         <service
             android:name=".service.VoiceService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- AndroidManifest.xml, trong <application> -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
 
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"

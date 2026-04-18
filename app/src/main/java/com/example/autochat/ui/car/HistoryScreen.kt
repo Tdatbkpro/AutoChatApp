@@ -48,7 +48,6 @@ class HistoryScreen(
             }
         })
     }
-
     private fun loadSessions() {
         scope.launch {
             try {
@@ -63,7 +62,6 @@ class HistoryScreen(
             }
         }
     }
-
     private fun formatTime(timestamp: Long): String {
         return try {
             val date = Date(timestamp)
@@ -187,6 +185,22 @@ class HistoryScreen(
                         chatScreen.clearMessages()
                         screenManager.popToRoot()
                         CarToast.makeText(carContext, "✨ Bắt đầu chat mới", CarToast.LENGTH_SHORT).show()
+                    }
+                    .build()
+            )
+            .addAction(
+                Action.Builder()
+                    .setIcon(
+                        CarIcon.Builder(
+                            IconCompat.createWithResource(
+                                carContext, android.R.drawable.ic_menu_rotate
+                            )
+                        ).build()
+                    )
+                    .setOnClickListener {
+                        page = 0
+                        loadSessions()
+                        CarToast.makeText(carContext, "🔄 Đã làm mới lịch sử", CarToast.LENGTH_SHORT).show()
                     }
                     .build()
             )

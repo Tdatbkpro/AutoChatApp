@@ -7,5 +7,8 @@ data class MessageResponse(
     @SerializedName("session_id") val sessionId: String,
     val content: String,
     val sender: String,
-    @SerializedName("created_at") val createdAt: String  // ✅ Sửa lại thành createdAt
+    @SerializedName("created_at") val createdAt: String,
+    // extra_data từ server là JSON object tùy ý
+    // Gson sẽ deserialize thành Map<String, Any> tự động khi dùng kiểu Any
+    @SerializedName("extra_data") val extraData: Map<String, Any?>? = null
 )

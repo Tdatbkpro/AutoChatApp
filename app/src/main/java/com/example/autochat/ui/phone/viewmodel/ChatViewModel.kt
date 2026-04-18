@@ -66,7 +66,9 @@ class ChatViewModel @Inject constructor(
             try {
                 val result = chatRepository.sendMessage(
                     sessionId = currentSessionId,
-                    content = content
+                    content = content,
+                    isFollowUp = false,
+                    null
                 )
 
                 android.util.Log.d("ChatViewModel", "Message sent, sessionId: ${result.sessionId}")

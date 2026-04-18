@@ -14,6 +14,8 @@
         <action
             android:id="@+id/action_chat_to_profile"
             app:destination="@id/profileFragment"/>
+        <action android:id="@+id/action_chat_to_articleDetail"
+            app:destination="@id/articleDetailFragment"/>
     </fragment>
 
     <fragment
@@ -24,7 +26,15 @@
             android:id="@+id/action_history_to_detail"
             app:destination="@id/sessionDetailFragment"/>
     </fragment>
+    <fragment android:id="@+id/articleDetailFragment"
+        android:name="com.example.autochat.ui.phone.fragment.ArticleDetailFragment">
+        <argument android:name="articleId" app:argType="integer" android:defaultValue="-1"/>
+        <argument android:name="title" app:argType="string"/>
+        <argument android:name="description" app:argType="string"/>
 
+        <action android:id="@+id/action_to_articleDetail"
+            app:destination="@id/articleDetailFragment"/>
+    </fragment>
     <fragment
         android:id="@+id/sessionDetailFragment"
         android:name="com.example.autochat.ui.phone.fragment.SessionDetailFragment"

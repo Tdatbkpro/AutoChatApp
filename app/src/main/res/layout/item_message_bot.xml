@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="12dp"
-                android:maxWidth="280dp">
+                android:maxWidth="300dp">
 
                 <TextView
                     android:id="@+id/tvContent"

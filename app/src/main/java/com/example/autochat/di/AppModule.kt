@@ -4,8 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.Room
+import com.example.autochat.data.local.AppDatabase
+import com.example.autochat.data.local.dao.ReadHistoryDao
 import com.example.autochat.remote.api.AuthApi
 import com.example.autochat.remote.api.ChatApi
+import com.example.autochat.remote.api.RagApi
 import com.example.autochat.domain.repository.AuthRepository
 import com.example.autochat.domain.repository.AuthRepositoryImpl
 import com.example.autochat.domain.repository.ChatRepository
@@ -21,6 +25,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences>
@@ -30,10 +35,29 @@ private val Context.dataStore: DataStore<Preferences>
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    // ── DataStore ─────────────────────────────────────────────────────────────
+
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext ctx: Context): DataStore<Preferences> =
         ctx.dataStore
+
+    // ── Room Database ─────────────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideAppDatabase(@ApplicationContext ctx: Context): AppDatabase =
+        Room.databaseBuilder(
+            ctx,
+            AppDatabase::class.java,
+            "autochat.db"
+        ).fallbackToDestructiveMigration().build()
+
+    @Provides
+    @Singleton
+    fun provideReadHistoryDao(db: AppDatabase): ReadHistoryDao = db.readHistoryDao()
+
+    // ── OkHttpClient (dùng chung) ─────────────────────────────────────────────
 
     @Provides
     @Singleton
@@ -42,25 +66,61 @@ object AppModule {
             level = HttpLoggingInterceptor.Level.BODY
         })
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    // ── Retrofit: server-chat port 8001 ───────────────────────────────────────
+
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
-        .baseUrl("http://10.177.243.218:8000/")
+    @Named("chat")
+    fun provideChatRetrofit(): Retrofit {
+        val client = OkHttpClient.Builder()
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            })
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(3, TimeUnit.MINUTES)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl("http://192.168.1.118:8001/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    // ── Retrofit: server-rag port 8000 ────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    @Named("rag")
+    fun provideRagRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
+        .baseUrl("http://192.168.1.118:8000/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
+    // ── API interfaces ────────────────────────────────────────────────────────
+
     @Provides
-    fun provideAuthApi(retrofit: Retrofit): AuthApi =
+    @Singleton
+    fun provideAuthApi(@Named("chat") retrofit: Retrofit): AuthApi =
         retrofit.create(AuthApi::class.java)
 
     @Provides
-    fun provideChatApi(retrofit: Retrofit): ChatApi =
+    @Singleton
+    fun provideChatApi(@Named("chat") retrofit: Retrofit): ChatApi =
         retrofit.create(ChatApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRagApi(@Named("rag") retrofit: Retrofit): RagApi =
+        retrofit.create(RagApi::class.java)
+
+    // ── Repositories ──────────────────────────────────────────────────────────
 
     @Provides
     @Singleton
@@ -70,12 +130,9 @@ object AppModule {
     @Singleton
     fun provideChatRepository(impl: ChatRepositoryImpl): ChatRepository = impl
 
-    // ✅ Thêm provider cho WebSocketManager
+    // ── WebSocket ─────────────────────────────────────────────────────────────
+
     @Provides
     @Singleton
-    fun provideWebSocketManager(): WebSocketManager {
-        return WebSocketManager()
-    }
-
-
+    fun provideWebSocketManager(): WebSocketManager = WebSocketManager()
 }

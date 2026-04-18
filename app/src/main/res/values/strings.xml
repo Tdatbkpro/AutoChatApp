@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Autochat</string>
+    <string name="voice_input">Nói</string>
+    <string name="new_chat">Mới</string>
     <string name="fragment_history_name">Lịch sử trò truyện</string>
     <string name="fragment_history_rong">Chưa có lịch sử nào</string>
 </resources>

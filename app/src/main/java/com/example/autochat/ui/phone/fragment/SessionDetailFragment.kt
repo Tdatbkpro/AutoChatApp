@@ -5,24 +5,29 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.autochat.R
 import com.example.autochat.databinding.FragmentSessionDetailBinding
 import com.example.autochat.di.ChatEntryPoint
-import com.example.autochat.domain.model.Message
 import com.example.autochat.domain.repository.ChatRepository
-import com.example.autochat.ui.phone.adapter.MessageAdapter
+import com.example.autochat.ui.phone.adapter.ChatMessageAdapter
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 
+/**
+ * Xem lịch sử chi tiết của một session.
+ * Dùng lại ChatMessageAdapter — bao gồm cả news list expandable.
+ */
 class SessionDetailFragment : Fragment() {
 
     private var _binding: FragmentSessionDetailBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var messageAdapter: MessageAdapter
-    private var messages = mutableListOf<Message>()
+    private lateinit var messageAdapter: ChatMessageAdapter
     private var sessionId: String? = null
     private var sessionTitle: String? = null
 
@@ -66,16 +71,36 @@ class SessionDetailFragment : Fragment() {
         binding.toolbar.apply {
             title = sessionTitle ?: "Chi tiết chat"
             setNavigationOnClickListener {
-                requireActivity().onBackPressed()
+                requireActivity().onBackPressedDispatcher.onBackPressed()
             }
         }
     }
 
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter(messages)
+        // Dùng lại ChatMessageAdapter để tự động xử lý news_list
+        messageAdapter = ChatMessageAdapter { articleId, title, description ->
+            openArticleDetail(articleId, title, description)
+        }
+
         binding.recyclerViewMessages.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = messageAdapter
+        }
+    }
+
+    private fun openArticleDetail(articleId: Int?, title: String, description: String) {
+        val bundle = bundleOf(
+            "articleId" to (articleId ?: -1),
+            "title" to title,
+            "description" to description
+        )
+        try {
+            findNavController().navigate(R.id.action_to_articleDetail, bundle)
+        } catch (e: Exception) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.navHostFragment, ArticleDetailFragment().apply { arguments = bundle })
+                .addToBackStack("article_detail")
+                .commit()
         }
     }
 
@@ -99,19 +124,19 @@ class SessionDetailFragment : Fragment() {
                     } else {
                         binding.recyclerViewMessages.visibility = View.VISIBLE
                         binding.tvEmpty.visibility = View.GONE
-
-                        // Cập nhật messages và notify adapter
-                        messages.clear()
-                        messages.addAll(messageList)
-                        messageAdapter.notifyDataSetChanged()
-
-                        // Cuộn xuống tin nhắn cuối cùng
-                        binding.recyclerViewMessages.scrollToPosition(messages.size - 1)
+                        messageAdapter.submitList(messageList)
+                        binding.recyclerViewMessages.post {
+                            binding.recyclerViewMessages.scrollToPosition(messageList.size - 1)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
-                Toast.makeText(requireContext(), "Lỗi tải tin nhắn: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Lỗi tải tin nhắn: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -126,8 +151,12 @@ class SessionDetailFragment : Fragment() {
                 lifecycleScope.launch {
                     try {
                         chatRepository.deleteMessages(sessionId!!)
-                        Toast.makeText(requireContext(), "Đã xóa tất cả tin nhắn", Toast.LENGTH_SHORT).show()
-                        requireActivity().onBackPressed()
+                        Toast.makeText(
+                            requireContext(),
+                            "Đã xóa tất cả tin nhắn",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
                     } catch (e: Exception) {
                         Toast.makeText(requireContext(), "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
                     }

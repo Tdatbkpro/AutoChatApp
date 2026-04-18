@@ -16,7 +16,19 @@ object AppState {
     var username: String = ""
 
     val isLoggedIn: Boolean get() = !accessToken.isNullOrEmpty()
+    var isDriving: Boolean = false
+        private set  // Chỉ cho phép cập nhật nội bộ qua method
 
+    // ✅ Method để cập nhật trạng thái lái xe
+    fun updateDrivingState(driving: Boolean) {
+        if (isDriving != driving) {
+            isDriving = driving
+            android.util.Log.d("APPSTATE", "🚗 Driving state changed: $isDriving")
+
+            // Notify tất cả screens đang active
+            chatScreen?.onDrivingStateChanged(isDriving)
+        }
+    }
     fun logout() {
         accessToken = null
         refreshToken = null

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom sheet hiển thị danh sách bài báo.
+    Dùng bởi NewsBottomSheetFragment (optional — thay thế inline expand nếu muốn).
+    IDs: tvSheetTitle, recyclerNews
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#1A1A2E"
+    android:paddingBottom="24dp">
+
+    <!-- Handle bar -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="#3A3A5A" />
+
+    <!-- Tiêu đề sheet -->
+    <TextView
+        android:id="@+id/tvSheetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="14dp"
+        android:text="Danh sách tin tức"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:fontFamily="sans-serif-medium" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2A2A40" />
+
+    <!-- Danh sách bài báo -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerNews"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:clipToPadding="false"
+        android:paddingVertical="4dp" />
+
+</LinearLayout>
