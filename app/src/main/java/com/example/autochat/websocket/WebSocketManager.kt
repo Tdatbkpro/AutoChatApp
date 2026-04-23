@@ -55,17 +55,23 @@ class WebSocketManager @Inject constructor() {
     }
 
     fun connect(userId: String) {
-        if (webSocket != null) {
-            webSocket?.close(1000, "New connection")
-            webSocket = null
+        // ✅ Nếu đã connected với đúng userId → không connect lại
+        if (connected && currentUserId == userId && webSocket != null) {
+            Log.d("WebSocketManager", "Already connected for $userId, skip")
+            return
         }
 
-        // Cancel reconnect if any
+        // Cancel reconnect đang chờ
         reconnectJob?.cancel()
+
+        // Đóng connection cũ nếu có
+        webSocket?.close(1000, "New connection")
+        webSocket = null
+        connected = false
 
         currentUserId = userId
         currentDeviceId = UUID.randomUUID().toString().substring(0, 8)
-        val url = "ws://1932wp3f-8000.asse.devtunnels.ms/ws/$userId/$currentDeviceId"
+        val url = "ws://192.168.1.118:8001/ws/$userId/$currentDeviceId"
 
         Log.d("WebSocketManager", "🔌 Connecting to $url")
 
@@ -115,23 +121,50 @@ class WebSocketManager @Inject constructor() {
 
                         "joined" -> {
                             val sessionId = json.getString("session_id")
-                            Log.d("WebSocketManager", "✅ Joined session: $sessionId")
+                            joinedSessionId = sessionId  // ← set ở đây
                             listeners.forEach { it.onJoined(sessionId) }
                         }
 
                         "new_message" -> {
                             val msgObj = json.getJSONObject("message")
+
+                            // Parse extra_data nếu có
+                            val extraData: Map<String, Any?>? = if (msgObj.has("extra_data") && !msgObj.isNull("extra_data")) {
+                                try {
+                                    val extraJson = msgObj.getJSONObject("extra_data")
+                                    val map = mutableMapOf<String, Any?>()
+                                    extraJson.keys().forEach { key ->
+                                        map[key] = extraJson.get(key)
+                                    }
+                                    map
+                                } catch (e: Exception) { null }
+                            } else null
+
                             val message = Message(
-                                id = msgObj.getString("id"),
+                                id        = msgObj.getString("id"),
                                 sessionId = msgObj.getString("session_id"),
-                                content = msgObj.getString("content"),
-                                sender = msgObj.getString("sender"),
-                                timestamp = parseTimestamp(msgObj.getString("created_at"))
+                                content   = msgObj.getString("content"),
+                                sender    = msgObj.getString("sender"),
+                                timestamp = parseTimestamp(msgObj.getString("created_at")),
+                                extraData = extraData
                             )
-                            Log.d("WebSocketManager", "📩 New message from ${message.sender}")
                             listeners.forEach { it.onNewMessage(message) }
                         }
-
+                        "bot_processing" -> {
+                            Log.d("WebSocketManager", "📨 bot_processing received!")
+                            listeners.forEach {
+                                it.onNewMessage(
+                                    Message(
+                                        id = "streaming_${System.currentTimeMillis()}",  // ← Unique ID
+                                        sessionId = json.optString("session_id", ""),
+                                        content = "",
+                                        sender = "bot",
+                                        timestamp = System.currentTimeMillis(),
+                                        extraData = null
+                                    )
+                                )
+                            }
+                        }
                         "typing" -> {
                             val userId = json.getString("user_id")
                             val isTyping = json.getBoolean("is_typing")
@@ -161,7 +194,14 @@ class WebSocketManager @Inject constructor() {
                             Log.e("WebSocketManager", "❌ Server error: $error")
                             listeners.forEach { it.onError(error) }
                         }
-
+                        "ping" -> {
+                            // ✅ Trả pong ngay cho server ping
+                            webSocket?.send(JSONObject().apply {
+                                put("type", "pong")
+                            }.toString())
+                            Log.d("WebSocketManager", "📨 Server ping → pong")
+                            listeners.forEach { it.onPong() }
+                        }
                         else -> {
                             Log.d("WebSocketManager", "Unknown message type: $type")
                         }
@@ -191,6 +231,7 @@ class WebSocketManager @Inject constructor() {
 
             private fun cleanup() {
                 connected = false
+                joinedSessionId = null  // ← reset khi mất kết nối
                 pingJob?.cancel()
                 pingJob = null
                 this@WebSocketManager.webSocket = null
@@ -202,12 +243,11 @@ class WebSocketManager @Inject constructor() {
         pingJob?.cancel()
         pingJob = CoroutineScope(Dispatchers.IO).launch {
             while (connected && isActive) {
-                delay(25000) // Send ping every 25 seconds
+                delay(15_000) // ✅ 15s < devtunnel timeout 30s
                 try {
-                    val pingMsg = JSONObject().apply {
+                    webSocket.send(JSONObject().apply {
                         put("type", "ping")
-                    }.toString()
-                    webSocket.send(pingMsg)
+                    }.toString())
                     Log.d("WebSocketManager", "📡 Ping sent")
                 } catch (e: Exception) {
                     Log.e("WebSocketManager", "Ping failed: ${e.message}")
@@ -218,42 +258,45 @@ class WebSocketManager @Inject constructor() {
     }
 
     private fun scheduleReconnect() {
+        // ✅ Không reconnect nếu đang có job reconnect chạy
+        if (reconnectJob?.isActive == true) return
+
         if (reconnectAttempts >= maxReconnectAttempts) {
             Log.e("WebSocketManager", "Max reconnect attempts reached")
+            reconnectAttempts = 0 // ✅ Reset để lần sau còn reconnect được
             return
         }
 
-        reconnectJob?.cancel()
         reconnectJob = CoroutineScope(Dispatchers.IO).launch {
             val delayMs = when (reconnectAttempts) {
-                0 -> 1000
-                1 -> 2000
-                2 -> 5000
-                else -> 10000
+                0 -> 1_000L
+                1 -> 3_000L
+                2 -> 8_000L
+                else -> 15_000L
             }
-
-            delay(delayMs.toLong())
+            delay(delayMs)
             reconnectAttempts++
-
             Log.d("WebSocketManager", "🔄 Reconnecting attempt $reconnectAttempts/$maxReconnectAttempts")
             if (currentUserId.isNotEmpty()) {
+                // ✅ Force reconnect — reset connected flag trước
+                connected = false
+                webSocket = null
                 connect(currentUserId)
             }
         }
     }
 
-    fun joinSession(sessionId: String) {
-        Log.d("WebSocketManager", "joinSession called: sessionId=$sessionId, connected=$connected, currentSessionId=${AppState.currentSessionId}")
+    private var joinedSessionId: String? = null  // ← thêm field này
 
+    fun joinSession(sessionId: String) {
         if (!connected) {
-            Log.w("WebSocketManager", "Cannot join session: not connected, saving for later")
             AppState.currentSessionId = sessionId
             return
         }
 
-        // ✅ NẾU ĐÃ Ở SESSION NÀY RỒI, KHÔNG GỬI LẠI
-        if (AppState.currentSessionId == sessionId) {
-            Log.d("WebSocketManager", "Already in session: $sessionId, skip join")
+        // Chỉ skip nếu server đã confirm joined rồi
+        if (joinedSessionId == sessionId) {
+            Log.d("WebSocketManager", "Already joined: $sessionId, skip")
             return
         }
 
@@ -261,12 +304,7 @@ class WebSocketManager @Inject constructor() {
             put("type", "join_session")
             put("session_id", sessionId)
         }
-        val message = json.toString()
-        Log.d("WebSocketManager", "Sending join_session: $message")
-
-        val sent = webSocket?.send(message)
-        Log.d("WebSocketManager", "joinSession sent: $sent")
-
+        val sent = webSocket?.send(json.toString())
         if (sent == true) {
             AppState.currentSessionId = sessionId
         }
@@ -292,6 +330,7 @@ class WebSocketManager @Inject constructor() {
 
         if (sent == true && sessionId == AppState.currentSessionId) {
             AppState.currentSessionId = null
+             joinedSessionId = null  // ← reset
         }
     }
 

@@ -6,5 +6,5 @@ data class ChatSession(
     var title: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val isSynced: Boolean = false  // ✅ Đã sync lên Firestore chưa
+    val endpoint: String = "ask"   // ← thêm
 )

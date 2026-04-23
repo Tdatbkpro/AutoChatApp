@@ -26,23 +26,30 @@ class VoiceActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.e("VOICE_DEBUG", "========== VOICE ACTIVITY STARTED ==========")
+        Log.e("VOICE_DEBUG", "Intent action: ${intent?.action}")
+        Log.e("VOICE_DEBUG", "Intent component: ${intent?.component}")
+        Log.e("VOICE_DEBUG", "Intent package: ${intent?.`package`}")
         Log.e("VOICE_DEBUG", "VoiceActivity onCreate, action: ${intent?.action}")
+
+        // Log tất cả extras để debug trên thiết bị thật
+        intent?.extras?.keySet()?.forEach {
+            Log.d("VOICE_DEBUG", "extra[$it] = ${intent.extras?.get(it)}")
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
-        // Xin permission notification (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    102
+                    this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 102
                 )
             }
         }
+
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -58,21 +65,33 @@ class VoiceActivity : Activity() {
         layout.addView(statusLabel)
         setContentView(layout)
 
-        // ✅ Kiểm tra intent action từ DHU
         when (intent?.action) {
+            // ── Google Assistant / Search query có sẵn → gửi thẳng, không cần mic ──
+            android.app.SearchManager.INTENT_ACTION_GLOBAL_SEARCH,
+            "com.google.android.gms.actions.SEARCH_ACTION",
+            Intent.ACTION_SEARCH -> {
+                val query = extractAssistantQuery(intent)
+                Log.e("VOICE_DEBUG", "Assistant query: $query")
+                if (!query.isNullOrBlank()) {
+                    statusLabel.text = "Nhan duoc tu Assistant: $query"
+                    sendResult(query)   // gửi thẳng, không cần startListening
+                } else {
+                    // Có action nhưng không có query → fallback sang mic
+                    Handler(Looper.getMainLooper()).postDelayed({ startListening() }, 300)
+                }
+            }
+
+            // ── Voice từ DHU hoặc Android Auto ───────────────────────────────────
             "android.speech.action.VOICE_SEARCH_HANDS_FREE",
             "android.intent.action.VOICE_COMMAND" -> {
                 Log.e("VOICE_DEBUG", "Nhan voice intent tu DHU!")
                 statusLabel.text = "Nhan duoc tu DHU mic!"
-                Handler(Looper.getMainLooper()).postDelayed({
-                    startListening()
-                }, 300)
+                Handler(Looper.getMainLooper()).postDelayed({ startListening() }, 300)
             }
+
+            // ── Mặc định (gọi từ VoiceReceiver) ──────────────────────────────────
             else -> {
-                // Gọi từ VoiceReceiver như cũ
-                Handler(Looper.getMainLooper()).postDelayed({
-                    startListening()
-                }, 300)
+                Handler(Looper.getMainLooper()).postDelayed({ startListening() }, 300)
             }
         }
     }
@@ -80,8 +99,45 @@ class VoiceActivity : Activity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         Log.e("VOICE_DEBUG", "onNewIntent action: ${intent?.action}")
+        intent?.extras?.keySet()?.forEach {
+            Log.d("VOICE_DEBUG", "extra[$it] = ${intent.extras?.get(it)}")
+        }
         setIntent(intent)
-        startListening()
+
+        // Kiểm tra assistant query trước
+        val query = extractAssistantQuery(intent)
+        if (!query.isNullOrBlank()) {
+            Log.e("VOICE_DEBUG", "onNewIntent Assistant query: $query")
+            sendResult(query)
+        } else {
+            startListening()
+        }
+    }
+
+    private fun extractAssistantQuery(intent: Intent?): String? {
+        if (intent == null) return null
+
+        // Cách 1: SearchManager.QUERY — phổ biến nhất
+        intent.getStringExtra(android.app.SearchManager.QUERY)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+
+        // Cách 2: key "query" thường thấy trên Android Auto
+        intent.getStringExtra("query")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+
+        // Cách 3: key "voice_query" hoặc "user_query"
+        (intent.getStringExtra("voice_query") ?: intent.getStringExtra("user_query"))
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+
+        // Cách 4: data URI dạng "autochat://query?text=..."
+        intent.data?.getQueryParameter("text")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+
+        return null
     }
 
     private fun startListening() {

@@ -97,6 +97,8 @@ class AutoChatMediaService : MediaLibraryService() {
         const val SESSION_CMD_DELETE_MSG_PAIR     = "CMD_DELETE_MSG_PAIR"
         const val SESSION_CMD_SEND_QUICK_REPLY    = "CMD_SEND_QUICK_REPLY"
         const val SESSION_CMD_VOICE_WITH_CONTEXT  = "CMD_VOICE_WITH_CONTEXT"
+        const val SESSION_CMD_OPEN_NAVIGATION = "CMD_OPEN_NAVIGATION"
+        const val SESSION_CMD_ADD_TO_QUEUE = "CMD_ADD_TO_QUEUE"
 
         // Bundle keys
         const val KEY_MESSAGE_TEXT      = "message_text"
@@ -114,6 +116,8 @@ class AutoChatMediaService : MediaLibraryService() {
         const val KEY_ARTICLE_CATEGORY  = "article_category"
         const val KEY_QR_SLOT_INDEX     = "qr_slot_index"
         const val KEY_CONTEXT_BOT_MSG   = "context_bot_msg"
+        const val KEY_NAV_PENDING_QUERY = "nav_pending_query"
+        const val KEY_NAV_PENDING_NAME  = "nav_pending_name"
 
         const val RESULT_OK    = SessionResult.RESULT_SUCCESS
         const val RESULT_ERROR = SessionResult.RESULT_ERROR_UNKNOWN
@@ -157,7 +161,8 @@ class AutoChatMediaService : MediaLibraryService() {
     private lateinit var voiceResultReceiver : BroadcastReceiver
     private lateinit var voiceStatusReceiver : BroadcastReceiver
     private lateinit var voicePartialReceiver: BroadcastReceiver
-
+    private var pendingNavQuery: String? = null
+    private var pendingNavName: String?  = null
     private var lastVoiceResult = ""
     private var lastVoiceTime   = 0L
 
@@ -167,18 +172,178 @@ class AutoChatMediaService : MediaLibraryService() {
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
+    // Trong onCreate(), sau khi tạo player:
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         restoreAuthState()
         player = AutoChatPlayer(this)
+
+        // Lắng nghe transition giữa các item
+        // Trong onCreate, sửa lại listener:
+        player.exoPlayer.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val currentId = mediaItem?.mediaId ?: return
+                if (currentId.startsWith(PREFIX_QR_ITEM)) {
+                    currentPlayingMediaId = currentId
+                    val idx = currentId.removePrefix(PREFIX_QR_ITEM).toIntOrNull() ?: return
+                    scope.launch { resolveAndReplaceQrItem(idx, currentId) }
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                Log.d("ADD_QUEUE", "playbackState=$playbackState " +
+                        "itemCount=${player.exoPlayer.mediaItemCount} " +
+                        "currentIdx=${player.exoPlayer.currentMediaItemIndex}")
+
+                if (playbackState == Player.STATE_ENDED) {
+                    val now = System.currentTimeMillis()
+
+                    // Chống spam: không auto-add nếu vừa add xong trong 2 giây
+                    if (isAutoAddingQueue || now - lastAutoAddTime < 2000) {
+                        Log.d("ADD_QUEUE", "Skip auto-add: isAdding=$isAutoAddingQueue timeDiff=${now - lastAutoAddTime}")
+                        return
+                    }
+
+                    // Chỉ auto-add khi queue thực sự hết (itemCount=0 hoặc đang ở item cuối)
+                    val itemCount  = player.exoPlayer.mediaItemCount
+                    val currentIdx = player.exoPlayer.currentMediaItemIndex
+                    if (itemCount > 0 && currentIdx < itemCount - 1) {
+                        Log.d("ADD_QUEUE", "Queue not exhausted, skip")
+                        return
+                    }
+
+                    isAutoAddingQueue = true
+                    lastAutoAddTime   = now
+                    addedToQueueSlots.clear()
+
+                    scope.launch {
+                        try {
+                            quickReplyManager.load(applicationContext, chatRepository, readHistoryRepository)
+
+                            val firstArticleIdx = quickReplyManager.items.indexOfFirst { it.id != null }
+                            val startIdx = if (firstArticleIdx >= 0) firstArticleIdx else 0
+                            Log.d("ADD_QUEUE", "Auto-add startIdx=$startIdx " +
+                                    "items=${quickReplyManager.items.map { "${it.category}:${it.id}" }}")
+
+                            addQrItemToQueue(startIdx)
+                        } catch (e: Exception) {
+                            Log.e("ADD_QUEUE", "Auto-add error: ${e.message}")
+                        } finally {
+                            // KHÔNG reset isAutoAddingQueue ở đây
+                            // Chỉ reset sau khi synthesis xong (trong addQrItemToQueue)
+                        }
+                    }
+                }
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
+                    val finishedIdx = oldPosition.mediaItemIndex
+                    val finishedId = try {
+                        player.exoPlayer.getMediaItemAt(finishedIdx).mediaId
+                    } catch (_: Exception) { return }
+
+                    if (finishedId.startsWith(PREFIX_QR_ITEM)) {
+                        val idx = finishedId.removePrefix(PREFIX_QR_ITEM).toIntOrNull() ?: return
+                        val qr = quickReplyManager.items.getOrNull(idx) ?: return
+                        scope.launch {
+                            if (qr.id != null) {
+                                readHistoryRepository.markRead(qr.id, qr.label, qr.category)
+                                quickReplyManager.refreshSlot(
+                                    idx, qr.id, qr.category,
+                                    chatRepository, readHistoryRepository
+                                )
+                                replaceQrItemInQueue(idx)
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+
         mediaSession = Builder(this, player.exoPlayer, SessionCallbackImpl())
             .setId("autochat_session_${System.currentTimeMillis()}")
             .build()
         registerVoiceReceivers()
         startForeground(NOTIF_ID, buildNotification())
         loadInitialData()
-        Log.d("MEDIA_SVC", "AutoChatMediaService created")
+    }
+    private suspend fun resolveAndReplaceQrItem(idx: Int, mediaId: String) {
+        val qr = quickReplyManager.items.getOrNull(idx) ?: return
+
+        val (uri, title, subtitle, artworkUri) = if (qr.id == null) {
+            // Structured data (gold/fuel/weather)
+            val query = when (qr.category.lowercase()) {
+                "gold"    -> "giá vàng hôm nay"
+                "fuel"    -> "giá xăng dầu hôm nay"
+                "weather" -> "thời tiết ${quickReplyManager.location} hôm nay"
+                else      -> qr.label
+            }
+            val structured = try { chatRepository.getStructuredData(query) } catch (_: Exception) { null }
+            val text = if (structured?.hasData == true && !structured.text.isNullOrBlank())
+                structured.text!! else "Không có dữ liệu cho \"${qr.label}\""
+            val cacheKey = "qr_structured_${qr.category}_${System.currentTimeMillis() / 60000}"
+            val u = synthesizeAndCache(cacheKey, text) ?: return
+            val artRes = "android.resource://${packageName}/${R.drawable.ic_reply}".toUri()
+            listOf(u, qr.label, text.take(80), artRes)
+        } else {
+            // Article
+            val article = chatRepository.getArticleById(qr.id) ?: return
+            val fullText = buildArticleText(article)
+            val cacheKey = "qr_article_${qr.id}"
+            val u = synthesizeAndCache(cacheKey, fullText) ?: return
+            val displayTitle = buildString {
+                append(article.title ?: qr.label)
+                if (!article.publishedDate.isNullOrBlank()) append(" • ${article.publishedDate}")
+            }
+            listOf(u, displayTitle, article.description ?: "", article.thumbnail?.toUri())
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val realItem = buildMediaItemWithUri(
+            mediaId    = mediaId,
+            uri        = uri as android.net.Uri,
+            title      = title as String,
+            subtitle   = subtitle as String,
+            artworkUri = artworkUri as? android.net.Uri
+        )
+
+        handler.post {
+            if (currentPlayingMediaId == mediaId &&
+                idx < player.exoPlayer.mediaItemCount) {
+                player.exoPlayer.replaceMediaItem(idx, realItem)
+                player.exoPlayer.prepare()
+                player.exoPlayer.play()
+            }
+        }
+    }
+
+    private suspend fun replaceQrItemInQueue(idx: Int) {
+        val qr = quickReplyManager.items.getOrNull(idx) ?: return
+        val title = buildString {
+            if (qr.icon.isNotEmpty()) append("${qr.icon} ")
+            append(if (qr.id != null) qr.category else qr.label)
+        }
+        val placeholder = buildMediaItemWithUri(
+            mediaId    = "$PREFIX_QR_ITEM$idx",
+            uri        = getSilentWavUri(),
+            title      = title,
+            subtitle   = qr.label
+        )
+        handler.post {
+            if (idx < player.exoPlayer.mediaItemCount) {
+                player.exoPlayer.replaceMediaItem(idx, placeholder)
+            } else {
+                player.exoPlayer.addMediaItem(placeholder)
+            }
+            notifyAllNodes()
+        }
     }
 
     override fun onDestroy() {
@@ -237,16 +402,48 @@ class AutoChatMediaService : MediaLibraryService() {
     private fun loadInitialData() {
         scope.launch {
             quickReplyManager.load(applicationContext, chatRepository, readHistoryRepository)
-            sessionListManager.observe(chatRepository, scope) // ← observe liên tục
+            sessionListManager.observe(chatRepository, scope)
             AppState.currentSession?.let {
                 messageManager.observeSession(it.id, chatRepository, scope) {
                     notifyAllNodes()
                 }
             }
-            mediaSession.notifyChildrenChanged(ROOT_ID, Int.MAX_VALUE, null)
-            mediaSession.notifyChildrenChanged(HISTORY_ROOT_ID, Int.MAX_VALUE, null)
-            mediaSession.notifyChildrenChanged(SESSION_ROOT_ID, Int.MAX_VALUE, null)
-            mediaSession.notifyChildrenChanged(CHAT_ROOT_ID, Int.MAX_VALUE, null)
+            notifyAllNodes()
+            // Pre-synthesize ngầm để cache sẵn, KHÔNG set vào queue
+            presynthesizeQrItemsInBackground()
+        }
+    }
+
+    private fun presynthesizeQrItemsInBackground() {
+        scope.launch(Dispatchers.IO) {
+            quickReplyManager.items.take(9).forEachIndexed { idx, qr ->
+                try {
+                    if (qr.id == null) {
+                        val query = when (qr.category.lowercase()) {
+                            "gold"    -> "giá vàng hôm nay"
+                            "fuel"    -> "giá xăng dầu hôm nay"
+                            "weather" -> "thời tiết ${quickReplyManager.location} hôm nay"
+                            else      -> qr.label
+                        }
+                        val structured = try {
+                            chatRepository.getStructuredData(query)
+                        } catch (_: Exception) { null }
+                        val text = if (structured?.hasData == true && !structured.text.isNullOrBlank())
+                            structured.text!! else return@forEachIndexed
+                        val cacheKey = "qr_structured_${qr.category}_${System.currentTimeMillis() / 60000}"
+                        synthesizeAndCache(cacheKey, text)
+                        Log.d("MEDIA_SVC", "Pre-synth QR structured $idx done")
+                    } else {
+                        val article = chatRepository.getArticleById(qr.id) ?: return@forEachIndexed
+                        val fullText = buildArticleText(article)
+                        synthesizeAndCache("qr_article_${qr.id}", fullText)
+                        Log.d("MEDIA_SVC", "Pre-synth QR article $idx done")
+                    }
+                } catch (e: Exception) {
+                    Log.w("MEDIA_SVC", "Pre-synth QR $idx: ${e.message}")
+                }
+            }
+            Log.d("MEDIA_SVC", "Pre-synthesis QR done")
         }
     }
 
@@ -320,8 +517,9 @@ class AutoChatMediaService : MediaLibraryService() {
                 val result = chatRepository.sendMessage(
                     sessionId  = AppState.currentSession?.id,
                     content    = text,
-                    isFollowUp = botMessage != null,
-                    botMessage
+                    endpoint = "news",
+                    botMessage,
+
                 )
 
                 // Cập nhật session nếu mới
@@ -455,9 +653,9 @@ class AutoChatMediaService : MediaLibraryService() {
                     .setSessionCommand(SessionCommand(SESSION_CMD_VOICE_WITH_CONTEXT, Bundle.EMPTY))
                     .build(),
                 CommandButton.Builder()
-                    .setDisplayName("💬 Chat mới")
+                    .setDisplayName("➕ Thêm vào hàng đợi")
                     .setIconResId(R.drawable.ic_add)
-                    .setSessionCommand(SessionCommand(SESSION_CMD_NEW_CHAT, Bundle.EMPTY))
+                    .setSessionCommand(SessionCommand(SESSION_CMD_ADD_TO_QUEUE, Bundle.EMPTY))
                     .build(),
                 CommandButton.Builder()
                     .setDisplayName("⏹ Dừng")
@@ -480,6 +678,9 @@ class AutoChatMediaService : MediaLibraryService() {
                 .add(SessionCommand(SESSION_CMD_TTS_SETTINGS,       Bundle.EMPTY))
                 .add(SessionCommand(SESSION_CMD_DELETE_MSG_PAIR,    Bundle.EMPTY))
                 .add(SessionCommand(SESSION_CMD_SEND_QUICK_REPLY,   Bundle.EMPTY))
+                .add(SessionCommand(SESSION_CMD_OPEN_NAVIGATION, Bundle.EMPTY))
+                .add(SessionCommand(SESSION_CMD_ADD_TO_QUEUE, Bundle.EMPTY))
+
                 .build()
 
             val result = MediaSession.ConnectionResult.AcceptedResultBuilder(session)
@@ -751,7 +952,35 @@ class AutoChatMediaService : MediaLibraryService() {
 
             // ── SESSION items ──────────────────────────────────────────────
             if (mediaId.startsWith("SESSION_")) {
+//                // Lưu queue hiện tại TRƯỚC khi bị overwrite
+//                saveCurrentQueue()
+
+                // Thực thi action
                 handleSessionItem(mediaId)
+
+                // Trả về silent WAV để AA có Now Playing tạm
+//                val silentUri = getSilentWavUri()
+//                val title = when (mediaId) {
+//                    "SESSION_NEW_CHAT"       -> "✅ Đã tạo chat mới"
+//                    "SESSION_MIC"            -> "🎤 Đang lắng nghe..."
+//                    "SESSION_DELETE_CURRENT" -> "🗑️ Đang xóa..."
+//                    "SESSION_INFO"           -> "📌 ${AppState.currentSession?.title ?: "Phiên chat"}"
+//                    else                     -> "AutoChat"
+//                }
+//
+//                // Restore queue cũ sau khi silent WAV bắt đầu play
+//                restoreQueue()
+//
+//                return Futures.immediateFuture(
+//                    MediaSession.MediaItemsWithStartPosition(
+//                        listOf(buildMediaItemWithUri(
+//                            mediaId  = mediaId,
+//                            uri      = silentUri,
+//                            title    = title,
+//                            subtitle = ""
+//                        )), 0, C.TIME_UNSET
+//                    )
+//                )
                 return Futures.immediateFuture(noItems())
             }
 
@@ -897,7 +1126,6 @@ class AutoChatMediaService : MediaLibraryService() {
         mediaId: String,
         item: MediaItem
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-
         val msgId = if (mediaId.startsWith(PREFIX_MSG_DETAIL))
             mediaId.removePrefix(PREFIX_MSG_DETAIL)
         else
@@ -912,6 +1140,48 @@ class AutoChatMediaService : MediaLibraryService() {
         }
 
         val extraType = msg.extraData?.get("type") as? String
+
+        if (extraType == "navigation") {
+            val navData  = msg.extraData?.get("navigation") as? Map<*, *>
+            val navQuery = navData?.get("nav_query") as? String
+            val target   = navData?.get("target") as? String
+
+            if (navQuery != null && target != null) {
+                pendingNavQuery = navQuery
+                pendingNavName  = target
+
+                // Update customLayout để hiện nút "Chỉ đường"
+                handler.post {
+                    val navLayout = ImmutableList.of(
+                        CommandButton.Builder()
+                            .setDisplayName("🗺️ Chỉ đường: $target")
+                            .setIconResId(R.drawable.ic_reply)
+                            .setSessionCommand(SessionCommand(SESSION_CMD_OPEN_NAVIGATION, Bundle.EMPTY))
+                            .build(),
+                        CommandButton.Builder()
+                            .setDisplayName("🎤 Hỏi về bài này")
+                            .setIconResId(R.drawable.ic_mic)
+                            .setSessionCommand(SessionCommand(SESSION_CMD_VOICE_WITH_CONTEXT, Bundle.EMPTY))
+                            .build(),
+                        CommandButton.Builder()
+                            .setDisplayName("➕ Thêm vào hàng đợi")
+                            .setIconResId(R.drawable.ic_add)
+                            .setSessionCommand(SessionCommand(SESSION_CMD_ADD_TO_QUEUE, Bundle.EMPTY))
+                            .build()
+                    )
+                    try {
+                        mediaSession.setCustomLayout(navLayout)
+                    } catch (e: Exception) {
+                        Log.w("MEDIA_SVC", "setCustomLayout: ${e.message}")
+                    }
+                }
+            }
+        } else {
+            // Reset về layout mặc định nếu không phải navigation
+            pendingNavQuery = null
+            pendingNavName  = null
+            handler.post { resetDefaultCustomLayout() }
+        }
         if (extraType == "news_list") {
             val nodeId      = "$PREFIX_NEWS_LIST${msg.id}"
             mediaSession.notifyChildrenChanged(nodeId, Int.MAX_VALUE, null)
@@ -976,7 +1246,35 @@ class AutoChatMediaService : MediaLibraryService() {
 
         return future
     }
-
+    private fun resetDefaultCustomLayout() {
+        try {
+            val defaultLayout = ImmutableList.of(
+                CommandButton.Builder()
+                    .setDisplayName("🎤 Hỏi về bài này")
+                    .setIconResId(R.drawable.ic_mic)
+                    .setSessionCommand(SessionCommand(SESSION_CMD_VOICE_WITH_CONTEXT, Bundle.EMPTY))
+                    .build(),
+                CommandButton.Builder()
+                    .setDisplayName("💬 Chat mới")
+                    .setIconResId(R.drawable.ic_add)
+                    .setSessionCommand(SessionCommand(SESSION_CMD_NEW_CHAT, Bundle.EMPTY))
+                    .build(),
+                CommandButton.Builder()
+                    .setDisplayName("⏹ Dừng")
+                    .setIconResId(R.drawable.ic_reply)
+                    .setPlayerCommand(Player.COMMAND_STOP)
+                    .build(),
+                CommandButton.Builder()
+                    .setDisplayName("➕ Thêm vào hàng đợi")
+                    .setIconResId(R.drawable.ic_add)
+                    .setSessionCommand(SessionCommand(SESSION_CMD_ADD_TO_QUEUE, Bundle.EMPTY))
+                    .build()
+            )
+            mediaSession.setCustomLayout(defaultLayout)
+        } catch (e: Exception) {
+            Log.w("MEDIA_SVC", "resetLayout: ${e.message}")
+        }
+    }
     /**
      * Tạo một WAV tối giản (44 bytes header + 0 byte PCM) làm placeholder.
      * ExoPlayer có thể load nó mà không crash.
@@ -1026,19 +1324,34 @@ class AutoChatMediaService : MediaLibraryService() {
                     val query = when (qr.category.lowercase()) {
                         "gold"    -> "giá vàng hôm nay"
                         "fuel"    -> "giá xăng dầu hôm nay"
-                        "weather" -> "thời tiết hôm nay"
+                        "weather" -> "thời tiết ${quickReplyManager.location} hôm nay"
                         else      -> qr.label
                     }
                     val structured = try { chatRepository.getStructuredData(query) } catch (_: Exception) { null }
                     val text = if (structured?.hasData == true && !structured.text.isNullOrBlank())
-                        structured.text!!
+                        structured.text
                     else "Không có dữ liệu cho \"${qr.label}\" lúc này."
+
+                    // Artwork theo category
+                    val artworkResId = when (qr.category.lowercase()) {
+                        "gold"    -> R.drawable.ic_vang    // thêm drawable tương ứng
+                        "fuel"    -> R.drawable.xang
+                        "weather" -> R.drawable.weather
+                        else      -> R.drawable.ic_reply
+                    }
+                    val artworkUri = "android.resource://${packageName}/$artworkResId".toUri()
 
                     val cacheKey = "qr_structured_${qr.category}_${System.currentTimeMillis() / 60000}"
                     val uri = synthesizeAndCache(cacheKey, text)
                     future.set(if (uri != null)
                         MediaSession.MediaItemsWithStartPosition(
-                            listOf(buildMediaItemWithUri(mediaId, uri, qr.label, text)), 0, C.TIME_UNSET)
+                            listOf(buildMediaItemWithUri(
+                                mediaId    = mediaId,
+                                uri        = uri,
+                                title      = qr.label,
+                                subtitle   = text.take(80),
+                                artworkUri = artworkUri  // ← thêm vào đây
+                            )), 0, C.TIME_UNSET)
                     else noItems())
                     return@launch
                 }
@@ -1058,19 +1371,28 @@ class AutoChatMediaService : MediaLibraryService() {
                 val fullText = buildArticleText(article)
                 val uri      = synthesizeAndCache(cacheKey, fullText)
 
-                scope.launch {
-                    try {
-                        readHistoryRepository.markRead(articleId, article.title ?: "", qr.category)
-                        if (idx != null) {
-                            quickReplyManager.refreshSlot(idx, articleId, qr.category, chatRepository, readHistoryRepository)
-                            notifyQuickRepliesChanged()
-                        }
-                    } catch (_: Exception) {}
+                val displayTitle = buildString {
+                    append(article.title ?: qr.label)
+                    if (!article.publishedDate.isNullOrBlank()) append(" • ${article.publishedDate}")
+                }
+
+                withContext(Dispatchers.IO) {
+                    readHistoryRepository.markRead(articleId, article.title ?: "", qr.category)
+                    Log.d("ADD_QUEUE", "markRead committed: $articleId")
+                    if (idx != null) {
+                        quickReplyManager.refreshSlot(idx, articleId, qr.category, chatRepository, readHistoryRepository)
+                    }
                 }
 
                 future.set(if (uri != null)
                     MediaSession.MediaItemsWithStartPosition(
-                        listOf(buildMediaItemWithUri(mediaId, uri, article.title ?: qr.label, fullText)),
+                        listOf(buildMediaItemWithUri(
+                            mediaId    = mediaId,
+                            uri        = uri,
+                            title      = displayTitle,
+                            subtitle   = article.description ?: fullText.take(80),
+                            artworkUri = article.thumbnail?.toUri()
+                        )),
                         0, C.TIME_UNSET)
                 else noItems())
 
@@ -1090,7 +1412,7 @@ class AutoChatMediaService : MediaLibraryService() {
         val clickedArticleId  = mediaId.removePrefix(PREFIX_NEWS_DETAIL).toIntOrNull()
         val clickedArtworkUri = item.mediaMetadata.artworkUri
         val future            = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
-
+        handler.post { player.exoPlayer.clearMediaItems() }
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val allMessages = messageManager.messages +
@@ -1182,20 +1504,36 @@ class AutoChatMediaService : MediaLibraryService() {
         artworkUri: android.net.Uri? = newsItem.mediaMetadata.artworkUri
     ): MediaItem? {
         val cacheKey = "news_article_$articleId"
+
+        // Fetch article để lấy thumbnail + metadata
+        val article = chatRepository.getArticleById(articleId) ?: return null
+
         val uri = audioCache[cacheKey] ?: run {
-            val article  = chatRepository.getArticleById(articleId) ?: return null
             val fullText = buildArticleText(article)
             synthesizeAndCache(cacheKey, fullText)
         } ?: return null
+
+        // Ưu tiên thumbnail từ Article, fallback sang artworkUri từ extraData
+        val finalArtworkUri = article.thumbnail?.toUri() ?: artworkUri
+
+        // Format title = title + publishedDate
+        val displayTitle = buildString {
+            append(article.title)
+            if (!article.publishedDate.isNullOrBlank()) {
+                append(" • ")
+                append(article.publishedDate)
+            }
+        }
 
         return MediaItem.Builder()
             .setMediaId(newsItem.mediaId)
             .setUri(uri)
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle(newsItem.mediaMetadata.title)
+                    .setTitle(displayTitle)
                     .setSubtitle(newsItem.mediaMetadata.subtitle)
-                    .setArtworkUri(artworkUri)
+                    .setDescription(article.description)
+                    .setArtworkUri(finalArtworkUri)
                     .setIsPlayable(true)
                     .setIsBrowsable(false)
                     .build()
@@ -1251,6 +1589,7 @@ class AutoChatMediaService : MediaLibraryService() {
             SESSION_CMD_NEW_CHAT -> {
                 AppState.currentSession = null
                 messageManager.clear()
+                addedToQueueSlots.clear()
                 notifyCurrentChatChanged()
                 mediaSession.notifyChildrenChanged(SESSION_ROOT_ID, Int.MAX_VALUE, null)
                 mediaSession.notifyChildrenChanged(ROOT_ID, Int.MAX_VALUE, null)
@@ -1355,13 +1694,200 @@ class AutoChatMediaService : MediaLibraryService() {
                 if (articleId > 0) scope.launch { handleQuickReplyArticle(articleId, category, slotIndex) }
                 SessionResult(RESULT_OK)
             }
-
+            SESSION_CMD_OPEN_NAVIGATION -> {
+                val query = pendingNavQuery
+                val name  = pendingNavName
+                if (query != null) {
+                    startNavigation(query, name ?: query)
+                    player.speakText("Đang mở chỉ đường đến $name")
+                } else {
+                    player.speakText("Không có điểm đến nào")
+                }
+                SessionResult(RESULT_OK)
+            }
+            SESSION_CMD_ADD_TO_QUEUE -> {
+                scope.launch { handleAddToQueue() }
+                SessionResult(RESULT_OK, Bundle.EMPTY)
+            }
             else -> SessionResult(RESULT_ERROR)
         }
     }
+    // Thêm biến lưu trạng thái queue trước khi bị interrupt
+    private var savedQueue: List<MediaItem> = emptyList()
+    private var savedQueueIndex: Int = 0
+    private var savedQueuePositionMs: Long = 0
 
+    private fun saveCurrentQueue() {
+        savedQueue = (0 until player.exoPlayer.mediaItemCount).map {
+            player.exoPlayer.getMediaItemAt(it)
+        }
+        savedQueueIndex    = player.exoPlayer.currentMediaItemIndex
+        savedQueuePositionMs = player.exoPlayer.currentPosition
+        Log.d("SESSION_ITEM", "Queue saved: ${savedQueue.size} items at idx=$savedQueueIndex pos=$savedQueuePositionMs")
+    }
+
+    private fun restoreQueue() {
+        if (savedQueue.isEmpty()) return
+        handler.postDelayed({
+            try {
+                player.exoPlayer.setMediaItems(savedQueue, savedQueueIndex, savedQueuePositionMs)
+                player.exoPlayer.prepare()
+                player.exoPlayer.play()
+                Log.d("SESSION_ITEM", "Queue restored: ${savedQueue.size} items")
+            } catch (e: Exception) {
+                Log.e("SESSION_ITEM", "Restore failed: ${e.message}")
+            }
+        }, 300) // delay nhỏ để AA xử lý xong session item
+    }
     // ── Quick reply article ────────────────────────────────────────────────
+    private val addedToQueueSlots = mutableSetOf<Int>()
+    private var isAutoAddingQueue = false
+    private var lastAutoAddTime   = 0L
+    // ── Sửa addQrItemToQueue - bỏ early return ở else branch ──
+    private suspend fun addQrItemToQueue(nextIdx: Int) {
+        val nextQr = quickReplyManager.items.getOrNull(nextIdx) ?: run {
+            isAutoAddingQueue = false  // reset khi không còn item
+            return
+        }
+        val mediaId = "$PREFIX_QR_ITEM$nextIdx"
+        val title = buildString {
+            if (nextQr.icon.isNotEmpty()) append("${nextQr.icon} ")
+            append(if (nextQr.id != null) nextQr.category else nextQr.label)
+        }
 
+        addedToQueueSlots.add(nextIdx)
+
+        val placeholder = buildMediaItemWithUri(
+            mediaId  = mediaId,
+            uri      = getSilentWavUri(),
+            title    = title,
+            subtitle = nextQr.label
+        )
+        handler.post {
+            player.exoPlayer.addMediaItem(player.exoPlayer.mediaItemCount, placeholder)
+            Log.d("ADD_QUEUE", "Placeholder added: $mediaId")
+        }
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                if (nextQr.id == null) {
+                    // ── Structured data ──
+                    val query = when (nextQr.category.lowercase()) {
+                        "gold"    -> "giá vàng hôm nay"
+                        "fuel"    -> "giá xăng dầu hôm nay"
+                        "weather" -> "thời tiết ${quickReplyManager.location} hôm nay"
+                        else      -> nextQr.label
+                    }
+                    val structured = try { chatRepository.getStructuredData(query) } catch (_: Exception) { null }
+                    val text = if (structured?.hasData == true && !structured.text.isNullOrBlank())
+                        structured.text!!
+                    else "Không có dữ liệu cho \"${nextQr.label}\" lúc này."
+                    val cacheKey = "qr_structured_${nextQr.category}_${System.currentTimeMillis() / 60000}"
+                    val uri = synthesizeAndCache(cacheKey, text)
+
+                    val artworkUri = when (nextQr.category.lowercase()) {
+                        "gold"    -> "android.resource://${packageName}/${R.drawable.ic_vang}".toUri()
+                        "fuel"    -> "android.resource://${packageName}/${R.drawable.xang}".toUri()
+                        "weather" -> "android.resource://${packageName}/${R.drawable.weather}".toUri()
+                        else      -> null
+                    }
+
+                    if (uri != null) replaceQrPlaceholder(mediaId, uri, title, nextQr.label, artworkUri)
+
+                } else {
+                    // ── Article ──
+                    val article = chatRepository.getArticleById(nextQr.id) ?: run {
+                        Log.w("ADD_QUEUE", "Article not found: ${nextQr.id}")
+                        isAutoAddingQueue = false
+                        return@launch
+                    }
+                    readHistoryRepository.markRead(nextQr.id, article.title ?: "", nextQr.category)
+                    Log.d("ADD_QUEUE", "markRead done: ${nextQr.id}")
+
+                    val fullText     = buildArticleText(article)
+                    val uri          = synthesizeAndCache("qr_article_${nextQr.id}", fullText)
+                    val thumbnailUri = article.thumbnail?.toUri()
+                    val displayTitle = buildString {
+                        append(article.title ?: nextQr.label)
+                        if (!article.publishedDate.isNullOrBlank()) append(" • ${article.publishedDate}")
+                    }
+
+                    if (uri != null) replaceQrPlaceholder(mediaId, uri, displayTitle, nextQr.label, thumbnailUri)
+                }
+            } catch (e: Exception) {
+                Log.e("ADD_QUEUE", "Synthesis error: ${e.message}", e)
+            } finally {
+                isAutoAddingQueue = false  // reset SAU khi synthesis xong
+                Log.d("ADD_QUEUE", "isAutoAddingQueue reset to false")
+            }
+        }
+    }
+
+    // ── Tách hàm replace để dùng chung ──
+    private fun replaceQrPlaceholder(
+        mediaId    : String,
+        uri        : android.net.Uri,
+        title      : String,
+        subtitle   : String,
+        artworkUri : android.net.Uri?
+    ) {
+        handler.post {
+            val idx = (0 until player.exoPlayer.mediaItemCount).firstOrNull { i ->
+                player.exoPlayer.getMediaItemAt(i).mediaId == mediaId
+            } ?: return@post
+
+            val realItem = buildMediaItemWithUri(
+                mediaId    = mediaId,
+                uri        = uri,
+                title      = title,
+                subtitle   = subtitle,
+                artworkUri = artworkUri
+            )
+            player.exoPlayer.replaceMediaItem(idx, realItem)
+
+            val currentPos = player.exoPlayer.currentMediaItemIndex
+            if (idx == currentPos + 1 && !player.exoPlayer.isPlaying) {
+                player.exoPlayer.prepare()
+            }
+
+            mediaSession.notifyChildrenChanged(QUICK_REPLY_ROOT_ID, Int.MAX_VALUE, null)
+            mediaSession.notifyChildrenChanged(ROOT_ID, Int.MAX_VALUE, null)
+            Log.d("ADD_QUEUE", "Replaced $mediaId at idx=$idx thumbnail=$artworkUri")
+        }
+    }
+
+    // handleAddToQueue chỉ còn là wrapper
+    private suspend fun handleAddToQueue() {
+        val playingId = currentPlayingMediaId
+        if (playingId?.startsWith(PREFIX_QR_ITEM) != true) {
+            player.speakText("Chức năng này chỉ dùng khi nghe Tin vắn")
+            return
+        }
+
+        val currentIdx = playingId.removePrefix(PREFIX_QR_ITEM).toIntOrNull() ?: return
+        val queuedIds = (0 until player.exoPlayer.mediaItemCount).map {
+            player.exoPlayer.getMediaItemAt(it).mediaId
+        }
+
+        // Ưu tiên tìm bài báo (id != null) tiếp theo chưa add
+        val nextIdx = (currentIdx + 1 until quickReplyManager.items.size).firstOrNull { idx ->
+            val qr = quickReplyManager.items[idx]
+            "$PREFIX_QR_ITEM$idx" !in queuedIds &&
+                    idx !in addedToQueueSlots &&
+                    qr.id != null  // ← chỉ lấy bài báo thật
+        } ?: // Nếu không còn bài báo → lấy bất kỳ slot chưa add
+        (currentIdx + 1 until quickReplyManager.items.size).firstOrNull { idx ->
+            "$PREFIX_QR_ITEM$idx" !in queuedIds && idx !in addedToQueueSlots
+        }
+
+        if (nextIdx == null) {
+            val extras = Bundle().apply { putString("toast_message", "✅ Đã thêm tất cả tin vắn") }
+            mediaSession.broadcastCustomCommand(SessionCommand("SHOW_TOAST", Bundle.EMPTY), extras)
+            return
+        }
+
+        addQrItemToQueue(nextIdx)
+    }
     private suspend fun handleQuickReplyArticle(articleId: Int, category: String?, slotIndex: Int) {
         try {
             val article = chatRepository.getArticleById(articleId) ?: return
@@ -1387,18 +1913,19 @@ class AutoChatMediaService : MediaLibraryService() {
 
     private fun startNavigation(navQuery: String, displayName: String) {
         try {
-            // Thử CarContext intent trước (nếu có CarContext)
-            val geoIntent = Intent(Intent.ACTION_VIEW).apply {
-                data  = "geo:0,0?q=${android.net.Uri.encode(navQuery)}".toUri()
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            // Gửi broadcast → NavigationReceiver xử lý
+            val broadcast = Intent("com.example.autochat.START_NAVIGATION").apply {
+                setPackage(packageName)          // explicit intent, bảo mật hơn
+                putExtra("nav_query", navQuery)
+                putExtra("display_name", displayName)
             }
-            startActivity(geoIntent)
-            Log.d("MEDIA_SVC", "Navigation started: $navQuery")
+            applicationContext.sendBroadcast(broadcast)
+            Log.d("MEDIA_SVC", "Nav broadcast sent: $navQuery")
         } catch (e: Exception) {
-            Log.e("MEDIA_SVC", "startNavigation failed: ${e.message}")
+            Log.e("MEDIA_SVC", "startNavigation: ${e.message}")
+            player.speakText("Không thể mở bản đồ")
         }
     }
-
     // ══════════════════════════════════════════════════════════════════════
     // Browse tree builders
     // ══════════════════════════════════════════════════════════════════════
@@ -1407,8 +1934,8 @@ class AutoChatMediaService : MediaLibraryService() {
         val hasMessages = messageManager.messages.isNotEmpty()
         return listOf(
             buildBrowsableItem(
-                id    = if (hasMessages) CHAT_ROOT_ID else QUICK_REPLY_ROOT_ID,
-                title = if (hasMessages) "💬 ${AppState.currentSession?.title ?: "Chat mới"}" else "💬 Tin vắn"
+                id    = QUICK_REPLY_ROOT_ID,
+                title =  "💬 Tin vắn"
             ),
             buildBrowsableItem(SESSION_ROOT_ID, "📌 ${AppState.currentSession?.title ?: "Phiên chat"}"),
             buildBrowsableItem(HISTORY_ROOT_ID, "🕒 Lịch sử", iconResId = R.drawable.ic_chat),
@@ -1462,7 +1989,7 @@ class AutoChatMediaService : MediaLibraryService() {
         val msgCount = messageManager.messages.size
 
         if (session != null) {
-            items.add(buildPlayableItem(
+            items.add(buildActionItem(
                 id       = "SESSION_INFO",
                 title    = "📌 ${session.title}",
                 subtitle = "$msgCount tin nhắn • ${formatTime(System.currentTimeMillis())}"
@@ -1474,20 +2001,26 @@ class AutoChatMediaService : MediaLibraryService() {
                     subtitle = "Mở danh sách hội thoại"
                 ))
             }
+            // Nút xóa session hiện tại
+            items.add(buildActionItem(
+                id       = "SESSION_DELETE_CURRENT",
+                title    = "🗑️ Xóa phiên này",
+                subtitle = "Xóa \"${session.title}\" và toàn bộ tin nhắn"
+            ))
         } else {
-            items.add(buildPlayableItem(
+            items.add(buildActionItem(
                 id       = "SESSION_EMPTY",
                 title    = "Chưa có phiên chat",
-                subtitle = "Nhấn nút Mic để bắt đầu"
+                subtitle = "Nhấn Mic để bắt đầu"
             ))
         }
 
-        items.add(buildPlayableItem(
+        items.add(buildActionItem(
             id       = "SESSION_NEW_CHAT",
             title    = "➕ Chat mới",
             subtitle = "Xóa lịch sử và bắt đầu phiên mới"
         ))
-        items.add(buildPlayableItem(
+        items.add(buildActionItem(
             id       = "SESSION_MIC",
             title    = "🎤 Ghi âm",
             subtitle = if (session != null) "Gửi tin nhắn vào phiên: ${session.title}"
@@ -1497,12 +2030,22 @@ class AutoChatMediaService : MediaLibraryService() {
         return items
     }
 
+    // Item vừa playable (để AA cho click) nhưng ta intercept trong onSetMediaItems
+// và return noItems() → AA không vào Now Playing
+    private fun buildActionItem(id: String, title: String, subtitle: String = "") =
+        MediaItem.Builder().setMediaId(id)
+            .setMediaMetadata(MediaMetadata.Builder()
+                .setTitle(title).setSubtitle(subtitle)
+                .setIsBrowsable(false).setIsPlayable(true)
+                .build())
+            .build()
+
     private fun buildQuickReplyChildren(): List<MediaItem> {
         val items = mutableListOf<MediaItem>()
         val qrList = quickReplyManager.items
 
         if (qrList.isNotEmpty()) {
-            qrList.take(6).forEachIndexed { idx, qr ->
+            qrList.take(9).forEachIndexed { idx, qr ->
                 val title = buildString {
                     if (qr.icon.isNotEmpty()) append("${qr.icon} ")
                     append(if (qr.id != null) qr.category else qr.label)
@@ -1511,7 +2054,7 @@ class AutoChatMediaService : MediaLibraryService() {
                 else when (qr.category.lowercase()) {
                     "gold"    -> "Giá vàng trong nước & thế giới"
                     "fuel"    -> "Giá xăng dầu mới nhất"
-                    "weather" -> "Dự báo thời tiết hôm nay"
+                    "weather" -> "Dự báo thời tiết ${quickReplyManager.location} hôm nay"
                     else      -> qr.label
                 }
                 val extras = Bundle().apply {
@@ -1607,13 +2150,17 @@ class AutoChatMediaService : MediaLibraryService() {
         val rawItems = extra["news_items"] as? List<*> ?: return emptyList()
 
         return rawItems.mapIndexedNotNull { idx, raw ->
-            val it         = raw as? Map<*, *> ?: return@mapIndexedNotNull null
-            val title      = it["title"] as? String ?: "Không có tiêu đề"
-            val desc       = it["description"] as? String ?: ""
-            val articleId  = (it["article_id"] as? Number)?.toInt()
+            val it        = raw as? Map<*, *> ?: return@mapIndexedNotNull null
+            val title     = it["title"] as? String ?: "Không có tiêu đề"
+            val desc      = it["description"] as? String ?: ""
+            val articleId = (it["article_id"] as? Number)?.toInt()
+            val pubDate   = it["published_date"] as? String ?: ""
+
+            // Ưu tiên thumbnail từ news_items, fallback sang media_items
+            val thumbnail = it["thumbnail"] as? String
 
             @Suppress("UNCHECKED_CAST")
-            val firstImage = (it["media_items"] as? List<*>)
+            val firstImage = thumbnail ?: (it["media_items"] as? List<*>)
                 ?.filterIsInstance<Map<*, *>>()
                 ?.firstOrNull { m -> m["type"] == "image" }
                 ?.get("url") as? String
@@ -1623,9 +2170,16 @@ class AutoChatMediaService : MediaLibraryService() {
                 if (firstImage != null) putString("artwork_url", firstImage)
             }
 
+            // Title = title + publishedDate
+            val displayTitle = buildString {
+                append("${idx + 1}. $title")
+                if (pubDate.isNotBlank()) append(" • $pubDate")
+            }
+
             val metaBuilder = MediaMetadata.Builder()
-                .setTitle("${idx + 1}. $title")
+                .setTitle(displayTitle)
                 .setSubtitle(desc)
+                .setDescription(desc)
                 .setIsPlayable(true).setIsBrowsable(false)
                 .setExtras(extras)
             if (firstImage != null) metaBuilder.setArtworkUri(firstImage.toUri())
@@ -1737,19 +2291,62 @@ class AutoChatMediaService : MediaLibraryService() {
     // ══════════════════════════════════════════════════════════════════════
     // SESSION_ROOT special items handler
     // ══════════════════════════════════════════════════════════════════════
-
+    private fun speakAndDismiss(text: String) {
+        // Speak text qua TTS
+        handler.post { player.speakText(text) }
+    }
     private fun handleSessionItem(mediaId: String) {
         when (mediaId) {
-            "SESSION_NEW_CHAT" -> handleCustomCommand(SESSION_CMD_NEW_CHAT, Bundle.EMPTY)
+            "SESSION_DELETE_CURRENT" -> {
+                val sessionId = AppState.currentSession?.id
+                if (sessionId != null) {
+                    scope.launch {
+                        try {
+                            chatRepository.deleteSession(sessionId)
+                            AppState.currentSession = null
+                            messageManager.clear()
+                            sessionListManager.reload(chatRepository)
+                            notifyAllNodes()
+                            speakAndDismiss("Đã xóa phiên chat")
+                        } catch (e: Exception) {
+                            speakAndDismiss("Lỗi khi xóa phiên chat")
+                        }
+                    }
+                } else {
+                    speakAndDismiss("Không có phiên nào để xóa")
+                }
+            }
+            "SESSION_NEW_CHAT" -> {
+                handleCustomCommand(SESSION_CMD_NEW_CHAT, Bundle.EMPTY)
+                speakAndDismiss("Đã tạo chat mới")
+            }
             "SESSION_MIC" -> {
                 val intent = Intent(this, VoiceService::class.java).apply {
                     this.action = VoiceService.ACTION_START
                     AppState.currentSession?.id?.let { putExtra("session_id", it) }
                 }
                 startForegroundService(intent)
+                speakAndDismiss("Đang lắng nghe...")
             }
-            "SESSION_INFO", "SESSION_EMPTY" -> { /* info only */ }
+            "SESSION_INFO" -> {
+                val session = AppState.currentSession
+                val msg = if (session != null)
+                    "Phiên ${session.title}, ${messageManager.messages.size} tin nhắn"
+                else "Chưa có phiên chat"
+                speakAndDismiss(msg)
+            }
+            "SESSION_EMPTY" -> {
+                speakAndDismiss("Nhấn Mic để bắt đầu chat")
+            }
         }
+    }
+
+    private fun broadcastToast(message: String) {
+        val extras = Bundle().apply { putString("toast_message", message) }
+        mediaSession.broadcastCustomCommand(
+            SessionCommand("SHOW_TOAST", Bundle.EMPTY), extras)
+        // Đồng thời speak text để user nghe được trên xe
+        handler.post { player.speakText(message) }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1789,7 +2386,15 @@ class AutoChatMediaService : MediaLibraryService() {
     }
 
     private suspend fun synthesizeAndCache(key: String, text: String): android.net.Uri? {
-        audioCache[key]?.let { return it }
+        audioCache[key]?.let { cachedUri ->
+            // Verify file vẫn còn tồn tại
+            val path = cachedUri.path
+            if (path != null && File(path).exists() && File(path).length() > 0) {
+                return cachedUri  // ← dùng cachedUri thay vì it
+            } else {
+                audioCache.remove(key)
+            }
+        }
         return withContext(Dispatchers.IO) {
             try {
                 val outFile = File(cacheDir, "msg_${key.take(50)}.wav")

@@ -206,7 +206,7 @@ class MyMediaBrowserService : MediaBrowserServiceCompat() {
                 val result = chatRepo.sendMessage(
                     sessionId  = AppState.currentSession?.id,
                     content    = text,
-                    isFollowUp = false,
+                    endpoint = "news",
                     null
                 )
                 val botText = result.botMessage.content

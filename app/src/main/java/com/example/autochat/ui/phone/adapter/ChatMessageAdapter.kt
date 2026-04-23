@@ -1,8 +1,11 @@
 package com.example.autochat.ui.phone.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -36,7 +39,11 @@ class ChatMessageAdapter(
         private const val VIEW_TYPE_USER = 0
         private const val VIEW_TYPE_BOT = 1
         private const val VIEW_TYPE_BOT_NEWS = 2
-
+//        private const val VIEW_TYPE_BOT_STREAMING = 3
+        const val STREAMING_PREFIX = "streaming_"
+        fun isStreamingPlaceholder(msg: Message): Boolean {
+            return msg.id.startsWith(STREAMING_PREFIX)
+        }
         fun isNewsList(msg: Message): Boolean {
             val extra = msg.extraData ?: return false
             if ((extra["type"] as? String) != "news_list") return false
@@ -72,11 +79,13 @@ class ChatMessageAdapter(
         return when {
             msg.sender == "user" -> VIEW_TYPE_USER
             msg.sender == "bot" && isNewsList(msg) -> VIEW_TYPE_BOT_NEWS
+            isStreamingPlaceholder(msg) -> VIEW_TYPE_BOT  // ← Dùng function mới
             else -> VIEW_TYPE_BOT
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        Log.d("ChatAdapter", "onCreateViewHolder: viewType=$viewType")
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
             VIEW_TYPE_USER -> UserViewHolder(
@@ -86,9 +95,12 @@ class ChatMessageAdapter(
                 ItemMessageBotNewsBinding.inflate(inflater, parent, false),
                 onNewsItemClick
             )
-            else -> BotViewHolder(
-                ItemMessageBotBinding.inflate(inflater, parent, false)
-            )
+            else -> {
+                Log.d("ChatAdapter", "🎬 Creating BotViewHolder for streaming")
+                BotViewHolder(
+                    ItemMessageBotBinding.inflate(inflater, parent, false)
+                )
+            }
         }
     }
 
@@ -97,6 +109,7 @@ class ChatMessageAdapter(
             is UserViewHolder -> holder.bind(getItem(position))
             is BotViewHolder -> holder.bind(getItem(position))
             is BotNewsViewHolder -> holder.bind(getItem(position))
+//            is StreamingViewHolder -> holder.bind(getItem(position))
         }
     }
 
@@ -114,9 +127,59 @@ class ChatMessageAdapter(
     class BotViewHolder(
         private val binding: ItemMessageBotBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+
+        private var textToSpeech: android.speech.tts.TextToSpeech? = null
+
         fun bind(msg: Message) {
-            binding.tvContent.text = msg.content
             binding.tvTime.text = formatTime(msg.timestamp)
+
+            if (msg.content.isEmpty()) {
+                // Streaming → Lottie
+                binding.lottieTyping.visibility = View.VISIBLE
+                binding.tvContent.visibility = View.GONE
+                binding.divider.visibility = View.GONE
+                binding.actionButtons.visibility = View.GONE
+                if (!binding.lottieTyping.isAnimating) binding.lottieTyping.playAnimation()
+            } else {
+                // Có content → hiện text + buttons
+                binding.lottieTyping.cancelAnimation()
+                binding.lottieTyping.visibility = View.GONE
+                binding.tvContent.visibility = View.VISIBLE
+                binding.tvContent.text = msg.content
+                binding.divider.visibility = View.VISIBLE
+                binding.actionButtons.visibility = View.VISIBLE
+                binding.btnStop.visibility = View.GONE
+
+                // Copy
+                binding.btnCopy.setOnClickListener {
+                    val clipboard = itemView.context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("message", msg.content)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(itemView.context, "✅ Đã sao chép", Toast.LENGTH_SHORT).show()
+                }
+
+                // Speak
+                binding.btnSpeak.setOnClickListener {
+                    binding.btnSpeak.visibility = View.GONE
+                    binding.btnStop.visibility = View.VISIBLE
+
+                    textToSpeech = android.speech.tts.TextToSpeech(itemView.context) { status ->
+                        if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                            textToSpeech?.setLanguage(java.util.Locale("vi"))
+                            textToSpeech?.speak(msg.content, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, null)
+                        }
+                    }
+                }
+
+                // Stop
+                binding.btnStop.setOnClickListener {
+                    textToSpeech?.stop()
+                    textToSpeech?.shutdown()
+                    textToSpeech = null
+                    binding.btnStop.visibility = View.GONE
+                    binding.btnSpeak.visibility = View.VISIBLE
+                }
+            }
         }
     }
 
@@ -197,7 +260,17 @@ class ChatMessageAdapter(
     // ── DiffCallback ──────────────────────────────────────────────────────
 
     class DiffCallback : DiffUtil.ItemCallback<Message>() {
-        override fun areItemsTheSame(a: Message, b: Message) = a.id == b.id
-        override fun areContentsTheSame(a: Message, b: Message) = a == b
+        override fun areItemsTheSame(a: Message, b: Message): Boolean {
+            // TRẢ VỀ TRUE cho streaming placeholder để nó update thay vì tạo mới
+            return a.id == b.id
+        }
+
+        override fun areContentsTheSame(a: Message, b: Message): Boolean {
+            // Chỉ force rebind khi content thay đổi
+            if (isStreamingPlaceholder(a) && isStreamingPlaceholder(b)) {
+                return a.content == b.content  // Chỉ rebind khi content khác
+            }
+            return a == b
+        }
     }
 }

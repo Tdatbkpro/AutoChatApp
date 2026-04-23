@@ -5,16 +5,23 @@ import com.example.autochat.ui.car.MyChatScreen
 import com.example.autochat.ui.car.VoiceSearchScreen
 
 object AppState {
+    var serverBaseUrl : String = "http://192.168.1.118:8001"
     var chatScreen: MyChatScreen? = null
     var voiceScreen: VoiceSearchScreen? = null
     var currentSession: ChatSession? = null
     var currentSessionId : String? = null
+        set(value) {
+            android.util.Log.e("AppState", "currentSessionId changed: $field → $value", Exception("stacktrace"))
+            field = value
+        }
     // Auth
     var accessToken: String? = null
     var refreshToken: String? = null
     var currentUserId: String = "local"
     var username: String = ""
-
+    var streamingSessionId: String? = null      // session đang streaming
+    var streamingContent: String = ""
+    var currentEndpoint: String = "news"
     val isLoggedIn: Boolean get() = !accessToken.isNullOrEmpty()
     var isDriving: Boolean = false
         private set  // Chỉ cho phép cập nhật nội bộ qua method

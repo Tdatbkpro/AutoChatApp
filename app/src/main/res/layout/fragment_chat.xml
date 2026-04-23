@@ -18,16 +18,22 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Đổi id cho rõ ràng -->
         <TextView
-            android:id="@+id/tvConnectionStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Đang kết nối..."
-            android:textColor="@color/design_default_color_error"
-            android:textSize="12sp"
+            android:id="@+id/connectionStatusBar"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:background="#1A3A5C"
+            android:text="Đang kết nối lại..."
+            android:textColor="#4A90E2"
+            android:textSize="11sp"
+            android:gravity="center"
             android:visibility="gone"
-            android:padding="4dp"
-            tools:visibility="visible" />
+            app:layout_constraintTop_toBottomOf="@id/toolbar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
         <TextView
             android:id="@+id/tvSessionTitle"
             android:layout_width="0dp"
@@ -44,21 +50,41 @@
             android:id="@+id/btnNewChat"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="+ Mới"
+            android:text="+ Chat mới"
             android:textSize="12sp"
-            android:backgroundTint="#1A3A5C"
+            android:textStyle="bold"
+            android:background="@drawable/bg_button_new_chat"
             android:textColor="#4A90E2"
-            android:paddingHorizontal="12dp"/>
+            android:paddingHorizontal="12dp"
+            android:stateListAnimator="@null"
+            android:elevation="0dp"/>
 
         <ImageButton
             android:id="@+id/btnMenu"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginStart="8dp"
             android:src="@drawable/ic_menu"
-            android:background="@android:color/transparent"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="8dp"
             app:tint="#AAAACC"/>
     </LinearLayout>
+
+    <!-- Connection status bar -->
+    <TextView
+        android:id="@+id/tvConnectionStatus"
+        android:layout_width="0dp"
+        android:layout_height="24dp"
+        android:background="#1A3A5C"
+        android:text="Đang kết nối lại..."
+        android:textColor="#4A90E2"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible"/>
 
     <!-- ProgressBar loading -->
     <ProgressBar
@@ -73,31 +99,91 @@
         app:layout_constraintTop_toTopOf="parent"/>
 
     <!-- Typing indicator -->
-    <TextView
-        android:id="@+id/tvTyping"
+    <LinearLayout
+        android:id="@+id/typingContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Đang nhập..."
-        android:textColor="#888888"
-        android:textSize="12sp"
-        android:visibility="gone"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="8dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/inputLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible">
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/lottieTypingIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            app:lottie_fileName="lottie_typing.json"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"/>
+
+        <TextView
+            android:id="@+id/tvTyping"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Đang nhập..."
+            android:textColor="#888899"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
 
     <!-- Messages RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:padding="12dp"
+        android:padding="8dp"
         android:clipToPadding="false"
-        android:scrollbars="vertical"
+        android:scrollbars="none"
+        android:overScrollMode="always"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintBottom_toTopOf="@id/inputLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Empty state -->
+    <LinearLayout
+        android:id="@+id/emptyState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="💬"
+            android:textSize="48sp"
+            android:gravity="center"
+            android:background="@drawable/bg_circle_dark"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chưa có tin nhắn nào"
+            android:textColor="#AAAACC"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hãy bắt đầu trò chuyện với AI"
+            android:textColor="#666"
+            android:textSize="13sp"/>
+    </LinearLayout>
 
     <!-- Skeleton Loading -->
     <LinearLayout
@@ -111,19 +197,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Skeleton item 1 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="16dp"
             android:gravity="center_vertical">
 
             <View
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_skeleton"
-                android:layout_marginEnd="8dp"/>
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_skeleton_circle"
+                android:layout_marginEnd="12dp"/>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -132,98 +217,113 @@
                 android:orientation="vertical">
 
                 <View
-                    android:layout_width="100dp"
-                    android:layout_height="16dp"
+                    android:layout_width="80dp"
+                    android:layout_height="14dp"
                     android:background="@drawable/bg_skeleton"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginBottom="8dp"/>
+
+                <View
+                    android:layout_width="220dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton"
+                    android:layout_marginBottom="6dp"/>
+
+                <View
+                    android:layout_width="160dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:layout_gravity="end">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="end">
+
+                <View
+                    android:layout_width="180dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton_right"
+                    android:layout_marginBottom="6dp"/>
+
+                <View
+                    android:layout_width="140dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton_right"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_skeleton_circle"
+                android:layout_marginEnd="12dp"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="80dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton"
+                    android:layout_marginBottom="8dp"/>
 
                 <View
                     android:layout_width="200dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_skeleton"/>
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Skeleton item 2 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_vertical">
-
-            <View
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_skeleton"
-                android:layout_marginEnd="8dp"/>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <View
-                    android:layout_width="100dp"
-                    android:layout_height="16dp"
+                    android:layout_height="14dp"
                     android:background="@drawable/bg_skeleton"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <View
-                    android:layout_width="250dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_skeleton"/>
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Skeleton item 3 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <View
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_skeleton"
-                android:layout_marginEnd="8dp"/>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <View
-                    android:layout_width="100dp"
-                    android:layout_height="16dp"
+                    android:layout_width="240dp"
+                    android:layout_height="14dp"
                     android:background="@drawable/bg_skeleton"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <View
-                    android:layout_width="150dp"
-                    android:layout_height="40dp"
+                    android:layout_width="120dp"
+                    android:layout_height="14dp"
                     android:background="@drawable/bg_skeleton"/>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Empty state -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="💬 Không có tin nhắn nào\nHãy bắt đầu trò chuyện!"
-        android:textColor="#666"
-        android:textSize="16sp"
-        android:gravity="center"
+    <!-- Scroll to bottom button -->
+    <ImageButton
+        android:id="@+id/btnScrollToBottom"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_arrow_down"
+        android:background="@drawable/bg_circle_blue"
+        android:padding="10dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:elevation="6dp"
+        android:translationZ="6dp"
+        app:tint="#FFFFFF"
+        app:layout_constraintBottom_toTopOf="@id/inputLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp"
+        tools:visibility="visible" />
 
     <!-- Input Layout -->
     <LinearLayout
@@ -231,9 +331,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
         android:gravity="center_vertical"
         android:background="#12121A"
+        android:elevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -245,12 +347,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            app:boxStrokeColor="#4A90E2"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeColor="#2A2A3A"
             app:boxCornerRadiusTopStart="24dp"
             app:boxCornerRadiusTopEnd="24dp"
             app:boxCornerRadiusBottomStart="24dp"
             app:boxCornerRadiusBottomEnd="24dp"
-            app:hintTextColor="#888899">
+            app:hintTextColor="#666688">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etMessage"
@@ -258,27 +361,34 @@
                 android:layout_height="wrap_content"
                 android:hint="Nhập tin nhắn..."
                 android:textColor="#FFFFFF"
-                android:maxLines="3"
+                android:textColorHint="#555566"
+                android:maxLines="4"
                 android:inputType="textMultiLine"
-                android:imeOptions="actionSend"/>
+                android:imeOptions="actionSend"
+                android:paddingVertical="10dp"
+                android:lineSpacingMultiplier="1.2"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Send button -->
         <ImageButton
             android:id="@+id/btnSend"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:src="@drawable/ic_send"
             android:background="@drawable/bg_circle_blue"
-            android:layout_marginEnd="4dp"/>
+            android:layout_marginEnd="4dp"
+            android:elevation="2dp"
+            android:translationZ="2dp"/>
 
         <!-- Mic button -->
         <ImageButton
             android:id="@+id/btnMic"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:src="@drawable/ic_mic"
-            android:background="@drawable/bg_circle_dark"/>
+            android:background="@drawable/bg_circle_dark"
+            android:elevation="2dp"
+            android:translationZ="2dp"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

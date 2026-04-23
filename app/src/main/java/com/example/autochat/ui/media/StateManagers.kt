@@ -78,6 +78,7 @@ class ChatMessageManager {
 class QuickReplyManager {
 
     var items           = listOf<QuickReplyItem>()
+    var location : String? = null;
     private val slotMap = mutableMapOf<Int, Int>()   // articleId → slotIndex
 
     /**
@@ -90,7 +91,7 @@ class QuickReplyManager {
         readHistoryRepo : ReadHistoryRepository
     ) {
         try {
-            val location = withContext(Dispatchers.IO) {
+             location = withContext(Dispatchers.IO) {
                 LocationHelper.getProvinceName(context.applicationContext)
             } ?: "hưng yên"
 
@@ -188,7 +189,7 @@ class QuickReplyManager {
 
     private fun rebuildSlotMap() {
         slotMap.clear()
-        items.take(6).forEachIndexed { index, item ->
+        items.take(9).forEachIndexed { index, item ->
             item.id?.let { slotMap[it] = index }
         }
     }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<actions>
+    <action intentName="custom.actions.intent.ASK_APP">
+        <fulfillment urlTemplate="https://autochat.example.com/search{?query}">
+            <parameter-mapping intentParameter="query" urlParameter="query" />
+        </fulfillment>
+    </action>
+</actions>

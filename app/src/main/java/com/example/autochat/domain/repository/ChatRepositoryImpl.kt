@@ -23,10 +23,17 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import okhttp3.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import retrofit2.Retrofit
+import javax.inject.Named
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -35,7 +42,8 @@ fun SessionResponse.toDomain(): ChatSession = ChatSession(
     userId = "",
     title = title,
     createdAt = parseTimestamp(createdAt),
-    updatedAt = parseTimestamp(updatedAt)
+    updatedAt = parseTimestamp(updatedAt),
+    endpoint = endpoint,
 )
 
 /**
@@ -69,19 +77,103 @@ class ChatRepositoryImpl @Inject constructor(
     private val chatApi: ChatApi,   // server-chat port 8001, cần JWT
     private val ragApi: RagApi,     // server-rag  port 8000, không cần JWT
     private val dataStore: DataStore<Preferences>,
-    private val webSocketManager: WebSocketManager
+    private val webSocketManager: WebSocketManager,
+    @Named("chat") private val chatRetrofit: Retrofit
 ) : ChatRepository {
 
     companion object {
         private val ACCESS_TOKEN = stringPreferencesKey("access_token")
     }
-
+    private val chatBaseUrl = chatRetrofit.baseUrl().toString().trimEnd('/')
+    private val streamClient = okhttp3.OkHttpClient.Builder()
+        .readTimeout(180, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
     private val _realtimeEvents = MutableSharedFlow<ChatRepository.RealtimeEvent>(
         extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     override val realtimeEvents: Flow<ChatRepository.RealtimeEvent> =
         _realtimeEvents.asSharedFlow()
+
+    override fun streamMessage(
+        sessionId: String?,
+        content: String,
+        endpoint: String
+    ): Flow<ChatRepository.StreamChunk> = callbackFlow {
+
+        val token = runCatching {
+            kotlinx.coroutines.runBlocking { getAccessToken() }
+        }.getOrElse {
+            trySend(ChatRepository.StreamChunk.Error("Not logged in"))
+            close(); return@callbackFlow
+        }
+
+        val body = org.json.JSONObject().apply {
+            put("message", content)
+            put("session_id", sessionId ?: "")
+            put("endpoint", endpoint)           // ← truyền đúng endpoint
+            put("bot_message", null as String?)
+        }.toString().toRequestBody("application/json".toMediaType())
+        val request = okhttp3.Request.Builder()
+            .url("$chatBaseUrl/chat/send/stream")
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Accept", "text/event-stream")
+            .post(body)
+            .build()
+
+        val call = streamClient.newCall(request)
+
+        call.enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                trySend(ChatRepository.StreamChunk.Error(e.message ?: "Network error"))
+                close(e)
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                try {
+                    val source = response.body?.source() ?: run {
+                        trySend(ChatRepository.StreamChunk.Error("Empty response"))
+                        close(); return
+                    }
+                    while (!source.exhausted()) {
+                        val line = source.readUtf8Line() ?: break
+                        if (!line.startsWith("data: ")) continue
+                        try {
+                            val obj = org.json.JSONObject(line.removePrefix("data: "))
+                            when (obj.optString("type")) {
+                                "token" -> trySend(
+                                    ChatRepository.StreamChunk.Token(obj.getString("text"))
+                                )
+                                "done" -> trySend(
+                                    ChatRepository.StreamChunk.Done(
+                                        obj.optString("full_response", "")
+                                    )
+                                )
+                                "meta" -> trySend(
+                                    ChatRepository.StreamChunk.Meta(
+                                        sessionId    = obj.getString("session_id"),
+                                        sessionTitle = obj.getString("session_title"),
+
+                                    )
+                                )
+                                "error" -> trySend(
+                                    ChatRepository.StreamChunk.Error(
+                                        obj.optString("message", "Unknown error")
+                                    )
+                                )
+                            }
+                        } catch (_: Exception) {}
+                    }
+                } finally {
+                    close()
+                }
+            }
+        })
+
+        awaitClose { call.cancel() }
+    }
 
     private val _sessions = MutableStateFlow<List<ChatSession>>(emptyList())
     override fun getSessionsFlow(): Flow<List<ChatSession>> = _sessions.asStateFlow()
@@ -102,6 +194,15 @@ class ChatRepositoryImpl @Inject constructor(
         webSocketManager.addListener(object : WebSocketManager.WebSocketListener {
             override fun onNewMessage(message: Message) {
                 CoroutineScope(Dispatchers.Main).launch {
+                    Log.e("ChatRepo", "onNewMessage: id=${message.id} sender=${message.sender} sessionId=${message.sessionId}")
+                    Log.e("ChatRepo", "onNewMessage: currentSessionId=${AppState.currentSessionId}")
+
+                    // STREAMING_ID chỉ emit event, KHÔNG add vào cache
+//                    if (message.id == "streaming_placeholder") {
+//                        _realtimeEvents.emit(ChatRepository.RealtimeEvent.NewMessage(message))
+//                        return@launch
+//                    }
+
                     val list = messagesCache.getOrPut(message.sessionId) { mutableListOf() }
                     if (list.none { it.id == message.id }) {
                         list.add(message)
@@ -187,8 +288,8 @@ class ChatRepositoryImpl @Inject constructor(
     // ── ChatRepository: Messages ──────────────────────────────────────────────
 
     override fun getMessagesFlow(sessionId: String): Flow<List<Message>> = flow {
-        AppState.currentSessionId = sessionId
-        webSocketManager.joinSession(sessionId)
+//        AppState.currentSessionId = sessionId
+//        webSocketManager.joinSession(sessionId)
 
         val sharedFlow = messagesFlows.getOrPut(sessionId) {
             MutableSharedFlow(replay = 1, extraBufferCapacity = 64)
@@ -222,31 +323,29 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun sendMessage(
         sessionId: String?,
         content: String,
-        isFollowUp: Boolean,
+        endpoint: String,
         botMessage: String?
     ): ChatRepository.SendMessageResult {
         val token = getAccessToken()
         val response = chatApi.sendMessage(
             token = "Bearer $token",
-                req = ChatRequest(message = content, sessionId = sessionId, isFollowUp=isFollowUp,botMessage=botMessage)
+            req = ChatRequest(
+                message = content,
+                sessionId = sessionId,
+                endpoint = endpoint,
+                botMessage = botMessage
+            )
         )
         refreshSessions()
 
-        // bot_message từ server KHÔNG có extra_data — nó nằm ở bot_detail (top-level).
-        // Merge bot_detail vào domain Message.extraData để MyChatScreen detect được news_list.
-        val botMessage = response.botMessage.toDomain().let { msg ->
-            if (response.botDetail != null) {
-                msg.copy(extraData = response.botDetail)
-            } else {
-                msg
-            }
+        val botMsg = response.botMessage.toDomain().let { msg ->
+            if (response.botDetail != null) msg.copy(extraData = response.botDetail) else msg
         }
-
 
         return ChatRepository.SendMessageResult(
             sessionId = response.sessionId,
             sessionTitle = response.sessionTitle,
-            botMessage = botMessage,
+            botMessage = botMsg,
             userMessage = response.userMessage.toDomain()
         )
     }
@@ -349,6 +448,7 @@ class ChatRepositoryImpl @Inject constructor(
                         category = body.category,
                         url = body.url,
                         author = body.author,
+                        thumbnail = body.thumbnail
                     )
                 }
             } else {
@@ -436,7 +536,8 @@ class ChatRepositoryImpl @Inject constructor(
                             publishedDate = a.publishedDate,
                             category = a.category,
                             url = a.url,
-                            author = a.author
+                            author = a.author,
+                            thumbnail = a.thumbnail
                         )
                     }
                 } else null

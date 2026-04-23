@@ -67,7 +67,7 @@ class ChatViewModel @Inject constructor(
                 val result = chatRepository.sendMessage(
                     sessionId = currentSessionId,
                     content = content,
-                    isFollowUp = false,
+                    "ask",
                     null
                 )
 

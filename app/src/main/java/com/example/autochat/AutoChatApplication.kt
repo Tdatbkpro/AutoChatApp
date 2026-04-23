@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
 @HiltAndroidApp
 class AutoChatApplication : Application() {
@@ -16,30 +17,21 @@ class AutoChatApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        // ✅ Dùng CoroutineScope, không block UI
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 authRepository.getCurrentUserFlow().collect { user ->
                     if (user != null && user.accessToken.isNotEmpty()) {
                         withContext(Dispatchers.Main) {
                             AppState.currentUserId = user.id
-                            AppState.username = user.username
-                            AppState.accessToken = user.accessToken
-                            AppState.refreshToken = user.refreshToken
-
-                            android.util.Log.e("APP", "✅ Restored user: ${AppState.currentUserId}")
-                            android.util.Log.e("APP", "✅ Username: ${AppState.username}")
+                            AppState.username      = user.username
+                            AppState.accessToken   = user.accessToken
+                            AppState.refreshToken  = user.refreshToken
                         }
-                    } else {
-                        android.util.Log.e("APP", "❌ No user found in DataStore")
                     }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("APP", "Error restoring user: ${e.message}")
             }
         }
-
-        android.util.Log.e("APP", "AppState after restore: userId=${AppState.currentUserId}")
     }
 }

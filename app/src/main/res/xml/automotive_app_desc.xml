@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<automotiveApp>
-    <uses name="media"/>
-<!--    <uses name="template"/>-->
-    <uses name="notification"/>
-    <!-- Custom actions cho Android Auto -->
-
+<automotiveApp xmlns:android="http://schemas.android.com/apk/res/android">
+<!--    <uses name="media"/>-->
+    <uses name="template"/>
+    <capability name="voice_search">
+        <intent
+            android:action="android.intent.action.SEARCH"
+            android:targetPackage="com.example.autochat"
+            android:targetClass="com.example.autochat.ui.car.MyCarAppService">
+            <extra
+                android:name="query"
+                android:key="query" />
+        </intent>
+    </capability>
 </automotiveApp>

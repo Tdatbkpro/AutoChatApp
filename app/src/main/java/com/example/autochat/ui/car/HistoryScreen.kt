@@ -112,7 +112,7 @@ class HistoryScreen(
 
                 itemListBuilder.addItem(
                     Row.Builder()
-                        .setTitle("💬 ${session.title.take(35)}")
+                        .setTitle("💬 ${if (session.endpoint == "ask") "Chat" else "Tin tức"} ${session.title.take(35)} ")
                         .addText(" $timeStr")
                         .setBrowsable(true)
                         .setOnClickListener {

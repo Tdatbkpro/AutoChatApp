@@ -19,10 +19,10 @@
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="AI Chatbot"
+        android:label="Đạt"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MaterialComponents.Light.NoActionBar">  <!-- ✅ Đã sửa -->
+        android:theme="@style/Theme.MaterialComponents.Light.NoActionBar">
 
         <activity
             android:name=".ui.phone.AuthActivity"
@@ -45,14 +45,31 @@
             android:turnScreenOn="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:launchMode="singleTop">
+
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.speech.action.VOICE_SEARCH_HANDS_FREE" />
-                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <action android:name="android.intent.action.SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.CAR_MODE" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="com.google.android.gms.actions.SEARCH_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.speech.action.VOICE_SEARCH_HANDS_FREE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.searchable"
+                android:resource="@xml/searchable" />
         </activity>
+
+        <!-- SỬA LẠI CHO ĐÚNG -->
+        <meta-data
+            android:name="android.app.default_searchable"
+            android:value=".ui.phone.VoiceActivity" />
 
         <receiver
             android:name=".receiver.VoiceReceiver"
@@ -61,22 +78,18 @@
                 <action android:name="com.example.autochat.START_VOICE" />
             </intent-filter>
         </receiver>
-
+        <receiver
+            android:name=".receiver.NavigationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.autochat.START_NAVIGATION" />
+            </intent-filter>
+        </receiver>
         <activity
             android:name=".ui.phone.HostActivity"
             android:exported="false"
             android:theme="@style/Theme.MaterialComponents.CompactMenu" />
-<!--        <service-->
-<!--            android:name=".service.MyMediaLibraryService"-->
-<!--            android:exported="true"-->
-<!--            android:foregroundServiceType="mediaPlayback"-->
-<!--            tools:ignore="ForegroundServicePermission">-->
-<!--            <intent-filter>-->
-<!--                <action android:name="androidx.media3.session.MediaLibraryService"-->
-<!--                    tools:ignore="ForegroundServicePermission" />-->
-<!--                <action android:name="android.media.browse.MediaBrowserService" />-->
-<!--            </intent-filter>-->
-<!--        </service>-->
+
         <service
             android:name=".ui.media.AutoChatMediaService"
             android:label="Đạt"
@@ -101,15 +114,25 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
+        <service
+            android:name=".ui.car.MyCarAppService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.POI" />
+            </intent-filter>
 
-                <service
-                    android:name=".ui.car.MyCarAppService"
-                    android:exported="true">
-                    <intent-filter>
-                        <action android:name="androidx.car.app.CarAppService" />
-                        <category android:name="androidx.car.app.category.MEDIA" />
-                    </intent-filter>
-                </service>
+            <!-- Nhận query từ Google Assistant qua voice -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.searchable"
+                android:resource="@xml/searchable" />
+        </service>
+
         <service
             android:name=".service.VoiceService"
             android:exported="false"
@@ -132,7 +155,12 @@
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
-
+        <meta-data
+            android:name="com.google.android.gms.actions"
+            android:resource="@xml/actions" />
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
     </application>
 
 </manifest>

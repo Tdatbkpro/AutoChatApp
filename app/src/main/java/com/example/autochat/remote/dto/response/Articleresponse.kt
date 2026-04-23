@@ -10,5 +10,6 @@ data class ArticleResponse(
     @SerializedName("published_date") val publishedDate: String?,
     val author : String?,
     val category: String?,
-    val url: String?
+    val url: String?,
+    val thumbnail : String?
 )

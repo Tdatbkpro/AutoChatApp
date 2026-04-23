@@ -4,4 +4,6 @@
     <string name="new_chat">Mới</string>
     <string name="fragment_history_name">Lịch sử trò truyện</string>
     <string name="fragment_history_rong">Chưa có lịch sử nào</string>
+    <string name="shortcut_voice_short">Hỏi Đạt</string>
+    <string name="shortcut_voice_long">Đặt câu hỏi cho Đạt</string>
 </resources>

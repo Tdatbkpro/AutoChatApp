@@ -254,7 +254,15 @@ class HistoryDetailScreen(
                         // Push màn hình chat ngay lập tức
                         AppState.currentSession = session
                         chatScreen.loadSession(session.id)
-                        screenManager.push(chatScreen)
+                        chatScreen.currentChatSessionScreen = null
+                        screenManager.push(
+                            ChatSessionScreen(
+                                carContext = carContext,
+                                chatScreen = chatScreen,
+                                sessionId  = session.id,
+                                endpoint   = session.endpoint   // ← lấy từ DB thay vì hardcode "news"
+                            )
+                        )
                     }
                     .build()
             )

@@ -15,6 +15,7 @@ interface ChatRepository {
         data class SessionDeleted(val sessionId: String) : RealtimeEvent()
         data class MessagesDeleted(val sessionId: String, val messageIds: List<String>) : RealtimeEvent()
         data class Typing(val userId: String, val isTyping: Boolean) : RealtimeEvent()
+        data class BotProcessing(var  sessionId: String) : RealtimeEvent()
         object Connected : RealtimeEvent()
         object Disconnected : RealtimeEvent()
         data class Joined(val sessionId: String) : RealtimeEvent()
@@ -22,30 +23,44 @@ interface ChatRepository {
     }
 
     val realtimeEvents: Flow<RealtimeEvent>
+    sealed class StreamChunk {
+        data class Token(val text: String) : StreamChunk()
+        data class Done(val fullResponse: String) : StreamChunk()
+        data class Meta(val sessionId: String, val sessionTitle: String) : StreamChunk()
+        data class Error(val message: String) : StreamChunk()
+    }
 
+    // Sửa signature — thêm endpoint
+    fun streamMessage(
+        sessionId: String?,
+        content: String,
+        endpoint: String = "ask"
+    ): Flow<StreamChunk>
     fun getSessionsFlow(): Flow<List<ChatSession>>
     fun getMessagesFlow(sessionId: String): Flow<List<Message>>
 
-    suspend fun sendMessage(sessionId: String?, content: String, isFollowUp : Boolean = false, botMessage: String?): SendMessageResult
+    suspend fun sendMessage(
+        sessionId: String?,
+        content: String,
+        endpoint: String = "news",
+        botMessage: String? = null
+    ): SendMessageResult
+
     suspend fun deleteSession(sessionId: String)
     suspend fun deleteMessages(sessionId: String)
     suspend fun deleteMessagePair(sessionId: String, userMessageId: String, botMessageId: String?)
     suspend fun updateSessionTitle(sessionId: String, newTitle: String)
-    suspend fun initRagSession(sessionId : String)
-    suspend fun getArticleById(articleId : Int) : Article?
+    suspend fun initRagSession(sessionId: String)
+    suspend fun getArticleById(articleId: Int): Article?
     suspend fun getQuickReplies(location: String?): List<QuickReplyItem>
-    suspend fun getNextArticle(
-        currentId: Int,
-        category: String?,
-        seenIds: List<Int> = emptyList()
-    ): Article?
-    suspend fun getStructuredData(query: String) : StructuredDataResponse?
-    suspend fun getMessages(sessionId: String) : List<Message>
+    suspend fun getNextArticle(currentId: Int, category: String?, seenIds: List<Int> = emptyList()): Article?
+    suspend fun getStructuredData(query: String): StructuredDataResponse?
+    suspend fun getMessages(sessionId: String): List<Message>
+
     data class SendMessageResult(
-        val userMessage : Message,
+        val userMessage: Message,
         val sessionId: String,
         val sessionTitle: String,
         val botMessage: Message
     )
-
 }
