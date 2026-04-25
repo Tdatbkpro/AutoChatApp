@@ -3,11 +3,10 @@ package com.example.autochat.ui.phone
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
+import com.example.autochat.R
 import com.example.autochat.databinding.ActivityAuthBinding
 import com.example.autochat.di.ChatEntryPoint
 import com.example.autochat.domain.repository.AuthRepository
@@ -33,17 +32,19 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private var isLoginMode = true
-    private var pinCountdown: CountDownTimer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAuthBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        setupUI()
         checkAlreadyLoggedIn()
+    }
+
+    private fun setupUI() {
         setupTabs()
         setupSubmitButton()
-        setupPinButton()
-        setupLogoutButton()
     }
 
     private fun hideKeyboard() {
@@ -53,59 +54,81 @@ class AuthActivity : AppCompatActivity() {
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
+
     private fun checkAlreadyLoggedIn() {
         scope.launch {
             val user = authRepository.getCurrentUserFlow().first()
             withContext(Dispatchers.Main) {
-                if (user != null) showLoggedInState(user.username)
+                if (user != null) {
+                    navigateToMain()
+                }
             }
         }
     }
 
     private fun setupTabs() {
-        binding.tabLogin.setOnClickListener { switchMode(true) }
-        binding.tabRegister.setOnClickListener { switchMode(false) }
+        binding.tabLogin.setOnClickListener {
+            if (!isLoginMode) switchMode(true)
+        }
+        binding.tabRegister.setOnClickListener {
+            if (isLoginMode) switchMode(false)
+        }
     }
 
     private fun switchMode(loginMode: Boolean) {
         isLoginMode = loginMode
         binding.tvError.visibility = View.GONE
         hideKeyboard()
+
         if (loginMode) {
-            binding.tabLogin.setBackgroundColor(0xFF2D2D4E.toInt())
+            // Switch to Login
+            binding.tabLogin.setBackgroundResource(R.drawable.bg_tab_selected)
             binding.tabLogin.setTextColor(0xFFFFFFFF.toInt())
-            binding.tabRegister.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            binding.tabRegister.setTextColor(0xFF888899.toInt())
+            binding.tabRegister.setBackgroundResource(R.drawable.bg_tab_unselected)
+            binding.tabRegister.setTextColor(0xFF8B8BA7.toInt())
+
             binding.tilUsername.visibility = View.GONE
             binding.btnSubmit.text = "Đăng nhập"
-            binding.etEmail.requestFocus()
 
+            binding.etEmail.requestFocus()
+            binding.etEmail.setText("")
+            binding.etPassword.setText("")
         } else {
-            binding.tabRegister.setBackgroundColor(0xFF2D2D4E.toInt())
+            // Switch to Register
+            binding.tabRegister.setBackgroundResource(R.drawable.bg_tab_selected)
             binding.tabRegister.setTextColor(0xFFFFFFFF.toInt())
-            binding.tabLogin.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            binding.tabLogin.setTextColor(0xFF888899.toInt())
+            binding.tabLogin.setBackgroundResource(R.drawable.bg_tab_unselected)
+            binding.tabLogin.setTextColor(0xFF8B8BA7.toInt())
+
             binding.tilUsername.visibility = View.VISIBLE
             binding.btnSubmit.text = "Đăng ký"
-            binding.etUsername.requestFocus()
 
+            binding.etUsername.requestFocus()
+            binding.etEmail.setText("")
+            binding.etPassword.setText("")
+            binding.etUsername.setText("")
         }
     }
 
     private fun setupSubmitButton() {
         binding.btnSubmit.setOnClickListener {
-
             hideKeyboard()
+
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
             val username = binding.etUsername.text.toString().trim()
 
             when {
                 email.isEmpty() -> showError("Vui lòng nhập email")
+                !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+                    showError("Email không hợp lệ")
                 password.length < 6 -> showError("Mật khẩu tối thiểu 6 ký tự")
                 !isLoginMode && username.isEmpty() -> showError("Vui lòng nhập tên hiển thị")
-                else -> if (isLoginMode) doLogin(email, password)
-                else doRegister(email, username, password)
+                !isLoginMode && username.length < 3 -> showError("Tên hiển thị tối thiểu 3 ký tự")
+                else -> {
+                    if (isLoginMode) doLogin(email, password)
+                    else doRegister(email, username, password)
+                }
             }
         }
     }
@@ -117,7 +140,7 @@ class AuthActivity : AppCompatActivity() {
                 val user = authRepository.login(email, password)
                 withContext(Dispatchers.Main) {
                     showLoading(false)
-                    showLoggedInState(user.username)
+                    navigateToMain()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -135,7 +158,7 @@ class AuthActivity : AppCompatActivity() {
                 val user = authRepository.register(email, username, password)
                 withContext(Dispatchers.Main) {
                     showLoading(false)
-                    showLoggedInState(user.username)
+                    navigateToMain()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -146,117 +169,46 @@ class AuthActivity : AppCompatActivity() {
         }
     }
 
-    private fun showLoggedInState(username: String) {
-        // ✅ Ẩn form, hiện PIN section
-        binding.tabContainer.visibility = View.GONE
-        binding.tilUsername.visibility = View.GONE
-        binding.tilEmail.visibility = View.GONE
-        binding.tilPassword.visibility = View.GONE
-        binding.btnSubmit.visibility = View.GONE
-        binding.tvError.visibility = View.GONE
-
-        // ✅ Hiện PIN section
-        binding.divider.visibility = View.VISIBLE
-        binding.tvPinTitle.visibility = View.VISIBLE
-        binding.tvPinSubtitle.visibility = View.VISIBLE
-        binding.btnGetPin.visibility = View.VISIBLE
-        binding.btnLogout.visibility = View.VISIBLE
-
-        // Cập nhật tagline
-        binding.tvTagline.text = "Xin chào, $username!"
-
-        // Mở MainActivity
+    private fun navigateToMain() {
         startActivity(Intent(this, MainActivity::class.java))
-    }
-
-    private fun setupPinButton() {
-        binding.btnGetPin.setOnClickListener { generatePin() }
-    }
-
-    private fun generatePin() {
-        binding.btnGetPin.isEnabled = false
-        binding.btnGetPin.text = "Dang tao PIN..."
-
-        scope.launch {
-            try {
-                // ✅ Phone gọi server tạo PIN
-                val pin = authRepository.generatePin()
-                withContext(Dispatchers.Main) {
-                    showPin(pin)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    binding.btnGetPin.isEnabled = true
-                    binding.btnGetPin.text = "Tao PIN cho xe"
-                    showError("Loi tao PIN: ${parseError(e.message)}")
-                }
-            }
-        }
-    }
-
-    private fun showPin(pin: String) {
-        binding.pinCard.visibility = View.VISIBLE
-        // Hiển thị PIN dạng "1 2 3 4 5 6"
-        binding.tvPin.text = pin.toCharArray().joinToString("  ")
-        binding.btnGetPin.text = "Tạo PIN mới"
-
-        // Countdown 5 phút
-        pinCountdown?.cancel()
-        pinCountdown = object : CountDownTimer(300_000, 1000) {
-            override fun onTick(ms: Long) {
-                val m = ms / 60000
-                val s = (ms % 60000) / 1000
-                binding.tvPinExpiry.text = "Hết hạn sau %d:%02d".format(m, s)
-            }
-            override fun onFinish() {
-                binding.tvPin.text = "- - - - - -"
-                binding.tvPinExpiry.text = "PIN đã hết hạn"
-                binding.btnGetPin.isEnabled = true
-                binding.btnGetPin.text = "Tạo PIN mới"
-            }
-        }.start()
-
-        // Enable lại sau 5s (tránh spam)
-        binding.root.postDelayed({
-            binding.btnGetPin.isEnabled = true
-        }, 5000)
-    }
-
-    private fun setupLogoutButton() {
-        binding.btnLogout.setOnClickListener {
-            scope.launch {
-                authRepository.logout()
-                withContext(Dispatchers.Main) {
-                    pinCountdown?.cancel()
-                    // Reset về form login
-                    recreate()
-                }
-            }
-        }
+        finish()
     }
 
     private fun showLoading(show: Boolean) {
         binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
         binding.btnSubmit.isEnabled = !show
-        binding.btnSubmit.alpha = if (show) 0.6f else 1f
+        binding.btnSubmit.alpha = if (show) 0.7f else 1f
+        binding.btnSubmit.text = if (show) {
+            if (isLoginMode) "Đang đăng nhập..." else "Đang đăng ký..."
+        } else {
+            if (isLoginMode) "Đăng nhập" else "Đăng ký"
+        }
     }
 
     private fun showError(msg: String) {
         binding.tvError.text = msg
         binding.tvError.visibility = View.VISIBLE
+
+        // Auto hide error after 3 seconds
+        binding.root.postDelayed({
+            if (binding.tvError.text == msg) {
+                binding.tvError.visibility = View.GONE
+            }
+        }, 3000)
     }
 
     private fun parseError(msg: String?): String = when {
         msg?.contains("401") == true -> "Email hoặc mật khẩu không đúng"
-        msg?.contains("400") == true -> "Email đã tồn tại"
-        msg?.contains("timeout") == true -> "Không kết nối được server"
+        msg?.contains("409") == true -> "Email đã tồn tại"
+        msg?.contains("400") == true -> "Dữ liệu không hợp lệ"
+        msg?.contains("timeout") == true -> "Không thể kết nối đến server"
         msg?.contains("Unable to resolve") == true -> "Không có kết nối mạng"
-        else -> "Lỗi kết nối server"
+        msg?.contains("Network") == true -> "Lỗi kết nối mạng"
+        else -> "Có lỗi xảy ra, vui lòng thử lại"
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        pinCountdown?.cancel()
         scope.cancel()
     }
 }

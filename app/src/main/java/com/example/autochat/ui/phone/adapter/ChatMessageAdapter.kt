@@ -1,5 +1,6 @@
 package com.example.autochat.ui.phone.adapter
 
+import android.annotation.SuppressLint
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -260,17 +261,25 @@ class ChatMessageAdapter(
     // ── DiffCallback ──────────────────────────────────────────────────────
 
     class DiffCallback : DiffUtil.ItemCallback<Message>() {
-        override fun areItemsTheSame(a: Message, b: Message): Boolean {
-            // TRẢ VỀ TRUE cho streaming placeholder để nó update thay vì tạo mới
-            return a.id == b.id
+        override fun areItemsTheSame(a: Message, b: Message) = a.id == b.id
+
+        @SuppressLint("DiffUtilEquals")
+        override fun areContentsTheSame(a: Message, b: Message): Boolean {
+            if (isStreamingPlaceholder(a) && isStreamingPlaceholder(b)) {
+                return a.content == b.content
+            }
+            return a.id == b.id &&
+                    a.content == b.content &&
+                    a.sender == b.sender &&
+                    a.extraData == b.extraData
         }
 
-        override fun areContentsTheSame(a: Message, b: Message): Boolean {
-            // Chỉ force rebind khi content thay đổi
-            if (isStreamingPlaceholder(a) && isStreamingPlaceholder(b)) {
-                return a.content == b.content  // Chỉ rebind khi content khác
+        override fun getChangePayload(oldItem: Message, newItem: Message): Any? {
+            // Trả về payload để chỉ update content, không rebind toàn bộ view
+            if (isStreamingPlaceholder(oldItem) && isStreamingPlaceholder(newItem)) {
+                return newItem.content
             }
-            return a == b
+            return null
         }
     }
 }

@@ -6,5 +6,6 @@ data class ChatSession(
     var title: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val endpoint: String = "ask"   // ← thêm
+    val endpoint: String = "ask",   // ← thêm
+    val isPinned : Boolean = false
 )

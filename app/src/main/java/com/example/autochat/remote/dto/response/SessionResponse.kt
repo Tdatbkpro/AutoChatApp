@@ -8,5 +8,6 @@ data class  SessionResponse(
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
     @SerializedName("message_count") val messageCount: Int = 0,  // ✅ Thêm message_count
-    val endpoint: String = "news"
+    val endpoint: String = "news",
+    @SerializedName("is_pinned") val isPinned : Boolean = false
 )

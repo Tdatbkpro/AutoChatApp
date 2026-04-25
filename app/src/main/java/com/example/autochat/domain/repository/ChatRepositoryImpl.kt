@@ -5,9 +5,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.autochat.AppState
+import com.example.autochat.data.local.AppDatabase
+import com.example.autochat.data.local.entity.MessageEntity
+import com.example.autochat.data.local.entity.SessionEntity
 import com.example.autochat.domain.model.Article
 import com.example.autochat.domain.model.ChatSession
 import com.example.autochat.domain.model.Message
+import com.example.autochat.llm.LlmEngine
+import com.example.autochat.llm.SyncManager
 import com.example.autochat.remote.api.ChatApi
 import com.example.autochat.remote.api.RagApi
 import com.example.autochat.remote.dto.request.ChatRequest
@@ -33,6 +38,7 @@ import okhttp3.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import retrofit2.Retrofit
+import java.util.UUID
 import javax.inject.Named
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
@@ -41,6 +47,7 @@ fun SessionResponse.toDomain(): ChatSession = ChatSession(
     id = id,
     userId = "",
     title = title,
+    isPinned = isPinned,
     createdAt = parseTimestamp(createdAt),
     updatedAt = parseTimestamp(updatedAt),
     endpoint = endpoint,
@@ -78,7 +85,10 @@ class ChatRepositoryImpl @Inject constructor(
     private val ragApi: RagApi,     // server-rag  port 8000, không cần JWT
     private val dataStore: DataStore<Preferences>,
     private val webSocketManager: WebSocketManager,
-    @Named("chat") private val chatRetrofit: Retrofit
+    @Named("chat") private val chatRetrofit: Retrofit,
+    private val database: AppDatabase,
+    private val llmEngine: LlmEngine,
+    private val syncManager: SyncManager
 ) : ChatRepository {
 
     companion object {
@@ -190,7 +200,16 @@ class ChatRepositoryImpl @Inject constructor(
                 delay(5000)
             }
         }
-
+        CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                delay(15_000)
+                try {
+                    syncManager.syncPendingMessages()
+                } catch (e: Exception) {
+                    Log.e("ChatRepo", "Auto sync failed: ${e.message}")
+                }
+            }
+        }
         webSocketManager.addListener(object : WebSocketManager.WebSocketListener {
             override fun onNewMessage(message: Message) {
                 CoroutineScope(Dispatchers.Main).launch {
@@ -549,5 +568,217 @@ class ChatRepositoryImpl @Inject constructor(
             android.util.Log.e("ChatRepo", "Exception in getNextArticle", e)
             null
         }
+    }
+    // Thêm vào ChatRepositoryImpl
+
+    override suspend fun togglePinSession(sessionId: String) {
+        try {
+            val response = chatApi.togglePinSession(
+                "Bearer ${getAccessToken()}",
+                sessionId
+            )
+            if (response.isSuccessful) {
+                Log.d("ChatRepo", "togglePinSession: success")
+                refreshSessions() // Refresh danh sách sessions
+            } else {
+                Log.e("ChatRepo", "togglePinSession: HTTP ${response.code()}")
+            }
+        } catch (e: Exception) {
+            Log.e("ChatRepo", "togglePinSession: ${e.message}")
+            throw e
+        }
+    }
+    override suspend fun sendOfflineMessage(
+        sessionId: String?,
+        content: String,
+        onToken: (String) -> Unit
+    ): Result<ChatRepository.SendMessageResult> {
+        return try {
+            if (!llmEngine.isLoaded()) {
+                return Result.failure(Exception("Model chưa được load"))
+            }
+
+            val isNewSession = sessionId == null
+            val finalSessionId = sessionId ?: UUID.randomUUID().toString()
+            val sessionTitle = content.take(30)
+
+            // Tạo session mới nếu chưa có
+            if (isNewSession) {
+                database.sessionDao().insert(
+                    SessionEntity(
+                        id = finalSessionId,
+                        userId = AppState.currentUserId,
+                        title = sessionTitle,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                        isSynced = false
+                    )
+                )
+            } else {
+                // Kiểm tra session có tồn tại không, nếu không thì tạo
+                val existing = database.sessionDao().getSession(finalSessionId)
+                if (existing == null) {
+                    database.sessionDao().insert(
+                        SessionEntity(
+                            id = finalSessionId,
+                            userId = AppState.currentUserId,
+                            title = sessionTitle,
+                            createdAt = System.currentTimeMillis(),
+                            updatedAt = System.currentTimeMillis(),
+                            isSynced = false
+                        )
+                    )
+                }
+            }
+
+            // Lưu user message
+            val userMsgId = UUID.randomUUID().toString()
+            val userTimestamp = System.currentTimeMillis()
+            database.messageDao().insert(
+                MessageEntity(
+                    id = userMsgId,
+                    sessionId = finalSessionId,
+                    content = content,
+                    sender = "user",
+                    timestamp = userTimestamp,
+                    isSynced = false,
+                    isOffline = true
+                )
+            )
+
+            // Lấy history KHÔNG bao gồm message vừa insert
+            val history = database.messageDao().getMessagesList(finalSessionId)
+                .filter { it.id != userMsgId }
+
+            val prompt = buildPromptForModel(history, content)
+            Log.d("ChatRepo", "Prompt: $prompt")
+
+            // Generate
+            val response = StringBuilder()
+            val generateResult = llmEngine.generate(prompt) { token ->
+                response.append(token)
+                onToken(token)
+            }
+
+            generateResult.onFailure { e ->
+                return Result.failure(Exception("Generate lỗi: ${e.message}"))
+            }
+
+            val botContent = response.toString().trim()
+            if (botContent.isEmpty()) {
+                return Result.failure(Exception("Model không trả về kết quả"))
+            }
+
+            // Lưu bot message
+            val botMsgId = UUID.randomUUID().toString()
+            val botTimestamp = System.currentTimeMillis()
+            database.messageDao().insert(
+                MessageEntity(
+                    id = botMsgId,
+                    sessionId = finalSessionId,
+                    content = botContent,
+                    sender = "bot",
+                    timestamp = botTimestamp,
+                    isSynced = false,
+                    isOffline = true
+                )
+            )
+
+            // Cập nhật session updatedAt
+            database.sessionDao().getSession(finalSessionId)?.let {
+                database.sessionDao().insert(it.copy(updatedAt = botTimestamp))
+            }
+
+            Log.d("ChatRepo", "✅ Saved: session=$finalSessionId user=$userMsgId bot=$botMsgId")
+
+            Result.success(
+                ChatRepository.SendMessageResult(
+                    sessionId = finalSessionId,
+                    sessionTitle = database.sessionDao().getSession(finalSessionId)?.title ?: sessionTitle,
+                    userMessage = Message(
+                        id = userMsgId,
+                        sessionId = finalSessionId,
+                        content = content,
+                        sender = "user",
+                        timestamp = userTimestamp
+                    ),
+                    botMessage = Message(
+                        id = botMsgId,
+                        sessionId = finalSessionId,
+                        content = botContent,
+                        sender = "bot",
+                        timestamp = botTimestamp
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            Log.e("ChatRepo", "sendOfflineMessage error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
+    // Get messages từ Room (cho offline)
+    override fun getOfflineMessagesFlow(sessionId: String): Flow<List<MessageEntity>> {
+        return database.messageDao().getMessages(sessionId)
+    }
+
+    private fun buildPromptForModel(messages: List<MessageEntity>, currentMsg: String): String {
+        val modelId = llmEngine.getCurrentModelId() ?: "default"
+
+        return when (modelId) {
+            "llama-3.2-1b" -> buildLlamaPrompt(messages, currentMsg)
+            "qwen2.5-1.5b", "qwen2.5-0.5b" -> buildQwenPrompt(messages, currentMsg)
+            else -> buildDefaultPrompt(messages, currentMsg)
+        }
+    }
+
+    private fun buildLlamaPrompt(messages: List<MessageEntity>, currentMsg: String): String {
+        val sb = StringBuilder()
+        sb.append("<|begin_of_text|>")
+        sb.append("<|start_header_id|>system<|end_header_id|>\n")
+        sb.append("Bạn là trợ lý AI ngắn gọn. Trả lời tối đa 3-4 câu, đi thẳng vào vấn đề.\n")  // ✅ Giới hạn
+        sb.append("<|eot_id|>")
+
+        messages.takeLast(4).forEach { msg ->  // ✅ Giảm xuống 4
+            val role = if (msg.sender == "user") "user" else "assistant"
+            sb.append("<|start_header_id|>$role<|end_header_id|>\n")
+            sb.append(msg.content)
+            sb.append("<|eot_id|>")
+        }
+
+        sb.append("<|start_header_id|>user<|end_header_id|>\n")
+        sb.append(currentMsg)
+        sb.append("<|eot_id|>")
+        sb.append("<|start_header_id|>assistant<|end_header_id|>\n")
+        return sb.toString()
+    }
+
+    private fun buildQwenPrompt(messages: List<MessageEntity>, currentMsg: String): String {
+        val sb = StringBuilder()
+        sb.append("<|im_start|>system\nBạn là trợ lý AI ngắn gọn. Trả lời tối đa 3-4 câu, đi thẳng vào vấn đề.\n<|im_end|>\n")  // ✅ Giới hạn
+
+        messages.takeLast(4).forEach { msg ->  // ✅ Giảm xuống 4
+            val role = if (msg.sender == "user") "user" else "assistant"
+            sb.append("<|im_start|>$role\n${msg.content}\n<|im_end|>\n")
+        }
+
+        sb.append("<|im_start|>user\n$currentMsg\n<|im_end|>\n")
+        sb.append("<|im_start|>assistant\n")
+        return sb.toString()
+    }
+
+    private fun buildDefaultPrompt(messages: List<MessageEntity>, currentMsg: String): String {
+        val sb = StringBuilder()
+        sb.append("System: Bạn là trợ lý AI ngắn gọn. Trả lời tối đa 3-4 câu, đi thẳng vào vấn đề.\n\n")  // ✅ Giới hạn
+
+        messages.takeLast(4).forEach { msg ->  // ✅ Giảm xuống 4
+            val role = if (msg.sender == "user") "User" else "Assistant"
+            sb.append("$role: ${msg.content}\n")
+        }
+
+        sb.append("User: $currentMsg\n")
+        sb.append("Assistant: ")
+        return sb.toString()
     }
 }

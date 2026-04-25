@@ -12,12 +12,12 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+<!--        <androidx.appcompat.widget.Toolbar-->
+<!--            android:id="@+id/toolbar"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="?attr/actionBarSize"-->
+<!--            android:background="?attr/colorPrimary"-->
+<!--            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />-->
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/navHostFragment"
@@ -32,122 +32,181 @@
     <!-- Navigation Drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
-        android:layout_width="320dp"
+        android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="#1A1A2E">
+        android:background="#16162A">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <!-- Header Avatar -->
+            <!-- Header Section với Gradient đẹp -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:padding="16dp"
-                android:background="@drawable/bg_gradient">
+                android:paddingTop="32dp"
+                android:paddingBottom="24dp"
+                android:background="@drawable/bg_drawer_header">
 
-                <TextView
-                    android:id="@+id/tvAvatar"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:background="@drawable/bg_avatar"
-                    android:gravity="center"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/white"
-                    android:elevation="4dp" />
+                <!-- Avatar với viền glow -->
+                <FrameLayout
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:background="@drawable/bg_avatar_glow" />
+
+                    <TextView
+                        android:id="@+id/tvAvatar"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_avatar"
+                        android:gravity="center"
+                        android:text="K"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:text="Khách"
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AutoChat AI"
+                    android:textColor="#8B8BA7"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp" />
 
             </LinearLayout>
 
-            <!-- New Chat Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNewChatDrawer"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="16dp"
-                android:text="✨ Chat mới"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#2196F3"
-                app:icon="@drawable/ic_add"
-                app:iconTint="#FFFFFF"
-                app:cornerRadius="24dp" />
-
-            <!-- Search Bar -->
-            <com.google.android.material.card.MaterialCardView
+            <!-- Action Buttons -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="#2A2A3A">
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
+                android:gravity="center">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNewChatDrawer"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="+ Chat mới"
+                    android:textSize="13sp"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#6C63FF"
+                    app:icon="@drawable/ic_add"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="18dp"
+                    app:cornerRadius="22dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+
+            </LinearLayout>
+
+            <!-- Search Bar Modern -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#1E1E3E">
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
                     android:orientation="horizontal"
-                    android:padding="8dp"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="12dp">
 
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:src="@drawable/ic_search"
-                        app:tint="#888899"
-                        android:layout_marginStart="8dp" />
+                        android:alpha="0.5" />
 
                     <EditText
                         android:id="@+id/etSearchSession"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:hint="🔍 Tìm kiếm đoạn chat..."
-                        android:textColor="#FFFFFF"
-                        android:textColorHint="#888899"
-                        android:background="@android:color/transparent"
-                        android:padding="12dp"
+                        android:hint="Tìm kiếm..."
+                        android:textColor="#E0E0F0"
+                        android:textColorHint="#5A5A7A"
+                        android:textSize="13sp"
+                        android:background="@null"
+                        android:paddingHorizontal="8dp"
                         android:singleLine="true"
                         android:imeOptions="actionSearch" />
 
                     <ImageButton
                         android:id="@+id/btnClearSearch"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_close"
-                        android:background="@android:color/transparent"
-                        app:tint="#888899"
+                        android:background="@drawable/bg_icon"
+                        android:scaleType="center"
                         android:visibility="gone" />
 
                 </LinearLayout>
 
-            </com.google.android.material.card.MaterialCardView>
+            </androidx.cardview.widget.CardView>
 
-            <!-- Sessions Title -->
-            <TextView
-                android:id="@+id/tvSessionsTitle"
+            <!-- Divider với text -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:text="📜 Lịch sử chat"
-                android:textColor="#888899"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="8dp">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#2D2D4E" />
+
+                <TextView
+                    android:id="@+id/tvSessionsTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lịch sử"
+                    android:textColor="#5A5A7A"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05"
+                    android:paddingHorizontal="12dp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#2D2D4E" />
+
+            </LinearLayout>
 
             <!-- Sessions RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
@@ -156,22 +215,61 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:clipToPadding="false"
-                android:padding="4dp" />
+                android:paddingHorizontal="8dp"
+                android:scrollbars="none" />
 
-            <!-- Settings Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSettings"
+            <!-- Bottom Section -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="8dp"
-                android:text="⚙️ Cài đặt"
-                android:textSize="14sp"
-                android:textColor="#CCCCDD"
-                android:backgroundTint="#2A2A3A"
-                app:icon="@drawable/ic_settings"
-                app:iconTint="#CCCCDD"
-                app:cornerRadius="24dp"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:paddingTop="8dp">
+
+                <LinearLayout
+                    android:id="@+id/btnSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_settings"
+                        android:alpha="0.7"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Cài đặt"
+                        android:textColor="#CCCCDD"
+                        android:textSize="14sp" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:alpha="0.3" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="v1.0.0"
+                    android:textColor="#3A3A5A"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

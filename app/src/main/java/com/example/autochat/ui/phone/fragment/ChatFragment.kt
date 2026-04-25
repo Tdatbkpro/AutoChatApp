@@ -1,5 +1,6 @@
 package com.example.autochat.ui.phone.fragment
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognizerIntent
@@ -7,11 +8,14 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.core.os.bundleOf
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -24,6 +28,7 @@ import com.example.autochat.di.ChatEntryPoint
 import com.example.autochat.domain.model.ChatSession
 import com.example.autochat.domain.model.Message
 import com.example.autochat.domain.repository.ChatRepository
+import com.example.autochat.ui.phone.MainActivity
 import com.example.autochat.ui.phone.adapter.ChatMessageAdapter
 import com.example.autochat.websocket.WebSocketManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,10 +38,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
+import com.example.autochat.llm.LlmEngine
+import com.example.autochat.llm.ModelManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.lifecycle.repeatOnLifecycle
+enum class SendMode { ONLINE, OFFLINE }
 @AndroidEntryPoint
 class ChatFragment : Fragment() {
+    @Inject
+    lateinit var llmEngine: LlmEngine
 
+    @Inject
+    lateinit var modelManager: ModelManager
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
 
@@ -50,9 +64,11 @@ class ChatFragment : Fragment() {
     private var streamingJob: Job? = null
     private var isStreaming: Boolean = false
     private val localMessages = mutableListOf<Message>()
+    private var sendMode = SendMode.ONLINE
     @Inject
     lateinit var webSocketManager: WebSocketManager
-
+    private var isGenerating: Boolean = false
+    private var currentGenerationJob: Job? = null
     private val chatRepository: ChatRepository by lazy {
         EntryPointAccessors.fromApplication(
             requireContext().applicationContext,
@@ -88,6 +104,9 @@ class ChatFragment : Fragment() {
         setupInputActions()
         setupRealtimeEvents()
         setupScrollToBottomButton()
+        setupSwipeToOpenDrawer()
+        setupModelStatus()
+
         binding.btnNewChat.setOnClickListener {
             loadMessagesJob?.cancel()
             observeJob?.cancel()
@@ -114,7 +133,151 @@ class ChatFragment : Fragment() {
             loadSession(session.id)
         }
     }
+    private var startX = 0f
+    private var startY = 0f
 
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupSwipeToOpenDrawer() {
+        val drawerLayout = (requireActivity() as MainActivity).binding.drawerLayout
+
+        // Set cho toàn bộ fragment
+        binding.root.setOnTouchListener { view, event ->
+            handleSwipeGesture(event, drawerLayout)
+        }
+
+        // Set riêng cho EditText (phần 2)
+        binding.etMessage.setOnTouchListener { view, event ->
+            handleSwipeGesture(event, drawerLayout)
+        }
+
+        // Set cho RecyclerView (phần 1)
+        binding.recyclerView.setOnTouchListener { view, event ->
+            handleSwipeGesture(event, drawerLayout)
+        }
+
+        // Set cho TextInputLayout (wrapper của EditText)
+        binding.tilMessage.setOnTouchListener { view, event ->
+            handleSwipeGesture(event, drawerLayout)
+        }
+    }
+
+    private fun handleSwipeGesture(event: MotionEvent, drawerLayout: DrawerLayout): Boolean {
+        return when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                startX = event.rawX
+                startY = event.rawY
+                false  // Vẫn cho EditText nhận event để gõ text
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val deltaX = event.rawX - startX
+                if (deltaX > 50) {
+                    // Bắt đầu vuốt → chặn EditText
+                    drawerLayout.openDrawer(GravityCompat.START)
+                    true
+                } else {
+                    false
+                }
+            }
+            else -> false
+        }
+    }
+    private fun setupModelStatus() {
+        binding.btnModelStatus.setOnClickListener {
+            showModelBottomSheet()
+        }
+
+        // ✅ Thêm click cho toggle mode
+        binding.btnToggleMode.setOnClickListener {
+            toggleSendMode()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                while (true) {
+                    updateModelStatus()
+                    updateToggleButton()
+                    kotlinx.coroutines.delay(2000)
+                }
+            }
+        }
+    }
+
+    private fun toggleSendMode() {
+        sendMode = if (sendMode == SendMode.ONLINE) SendMode.OFFLINE else SendMode.ONLINE
+        updateToggleButton()
+
+        val modeText = if (sendMode == SendMode.OFFLINE) "Offline (Model)" else "Online (Server)"
+        Toast.makeText(requireContext(), "Chuyển sang: $modeText", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateToggleButton() {
+        val isOnline = isNetworkAvailable()
+        val hasModel = llmEngine.isLoaded()
+
+        // Chỉ hiện toggle khi vừa có mạng vừa có model
+        if (isOnline && hasModel) {
+            binding.btnToggleMode.visibility = View.VISIBLE
+
+            if (sendMode == SendMode.OFFLINE) {
+                binding.btnToggleMode.setImageResource(R.drawable.ic_offline)
+                binding.btnToggleMode.imageTintList =
+                    android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50"))
+            } else {
+                binding.btnToggleMode.setImageResource(R.drawable.ic_online)
+                binding.btnToggleMode.imageTintList =
+                    android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4A90E2"))
+            }
+        } else {
+            binding.btnToggleMode.visibility = View.GONE
+
+            // Tự động chọn mode phù hợp
+            sendMode = if (hasModel) SendMode.OFFLINE else SendMode.ONLINE
+        }
+    }
+
+
+    private fun showModelBottomSheet() {
+        val bottomSheet = ModelManagerFragment()
+        bottomSheet.show(parentFragmentManager, "ModelBottomSheet")
+    }
+    private fun resetSendButton() {
+        binding.btnSend.apply {
+            setImageResource(R.drawable.ic_send)
+            val hasText = binding.etMessage.text?.isNotEmpty() == true
+            isEnabled = hasText
+            alpha = if (hasText) 1f else 0.4f
+        }
+    }
+    private fun updateModelStatus() {
+        val isOnline = isNetworkAvailable()
+        val loadedModelId = llmEngine.getCurrentModelId()
+        val loadedModel = loadedModelId?.let {
+            modelManager.getModelsWithStatus().find { m -> m.id == it }
+        }
+
+        binding.tvModelStatus.text = when {
+            isOnline && loadedModel != null -> loadedModel.name
+            isOnline -> "Online"
+            loadedModel != null -> loadedModel.name
+            else -> "Chọn model"
+        }
+
+        val iconTint = when {
+            isOnline && loadedModel != null -> "#4CAF50"
+            isOnline -> "#4A90E2"
+            loadedModel != null -> "#4CAF50"
+            else -> "#FF6B6B"
+        }
+        binding.ivModelIcon.imageTintList =
+            android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor(iconTint))
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
     /**
      * Mở ArticleDetailFragment khi nhấn vào bài báo trong danh sách.
      * Truyền articleId để fragment tự fetch chi tiết từ repository.
@@ -139,12 +302,15 @@ class ChatFragment : Fragment() {
     private fun setupInputActions() {
         binding.etMessage.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) {
-                sendMessage()
+                if (isGenerating) stopGeneration() else sendMessage()
                 true
             } else false
         }
 
-        binding.btnSend.setOnClickListener { sendMessage() }
+        binding.btnSend.setOnClickListener {
+            if (isGenerating) stopGeneration() else sendMessage()
+        }
+
         binding.btnMic.setOnClickListener { startVoiceInput() }
 
         binding.etMessage.addTextChangedListener(object : TextWatcher {
@@ -153,7 +319,18 @@ class ChatFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val newTyping = !s.isNullOrEmpty()
+                val hasText = !s.isNullOrEmpty()
+
+                // ✅ Cập nhật nút send - chỉ khi không đang generate
+                if (!isGenerating) {
+                    binding.btnSend.apply {
+                        isEnabled = hasText
+                        alpha = if (hasText) 1f else 0.4f
+                        setImageResource(R.drawable.ic_send)
+                    }
+                }
+
+                val newTyping = hasText
                 if (newTyping != isTyping) {
                     isTyping = newTyping
                     webSocketManager.sendTyping(isTyping)
@@ -172,6 +349,18 @@ class ChatFragment : Fragment() {
 
             override fun afterTextChanged(s: Editable?) {}
         })
+    }
+    private fun stopGeneration() {
+        streamingJob?.cancel()
+        currentGenerationJob?.cancel()
+        isGenerating = false
+
+        // Reset nút send
+        binding.btnSend.apply {
+            setImageResource(R.drawable.ic_send)
+            isEnabled = binding.etMessage.text?.isNotEmpty() == true
+            alpha = if (isEnabled) 1f else 0.4f
+        }
     }
 
     private fun setupRealtimeEvents() {
@@ -252,11 +441,11 @@ class ChatFragment : Fragment() {
                         }
                     }
                     is ChatRepository.RealtimeEvent.Connected -> {
-                        binding.connectionStatusBar.visibility = View.GONE
+                        binding.tvConnectionStatus.visibility = View.GONE
                     }
                     is ChatRepository.RealtimeEvent.Disconnected -> {
-                        binding.connectionStatusBar.visibility = View.VISIBLE
-                        binding.connectionStatusBar.text = "Đang kết nối lại..."
+                        binding.tvConnectionStatus.visibility = View.VISIBLE
+                        binding.tvConnectionStatus.text = "Đang kết nối lại..."
                     }
                     is ChatRepository.RealtimeEvent.Error -> {
                         Toast.makeText(requireContext(), "Lỗi: ${event.error}", Toast.LENGTH_SHORT).show()
@@ -271,31 +460,34 @@ class ChatFragment : Fragment() {
         val text = binding.etMessage.text.toString().trim()
         if (text.isEmpty()) return
 
-        // Cancel stream cũ nếu có
         streamingJob?.cancel()
-        isStreaming = true  // ← set NGAY ĐÂY, trước khi collect
-        AppState.streamingSessionId = AppState.currentSessionId  // ← lưu session đang stream
+        isStreaming = true
+        AppState.streamingSessionId = AppState.currentSessionId
         AppState.streamingContent = ""
-        Log.d("ChatFragment", "sendMessage sessionId=${AppState.currentSessionId}")
         binding.etMessage.setText("")
         webSocketManager.sendTyping(false)
 
-        val now = System.currentTimeMillis()
+        isGenerating = true
+        binding.btnSend.apply {
+            setImageResource(R.drawable.ic_pause)
+            isEnabled = true
+            alpha = 1f
+        }
 
-        // ── 1. Hiện user bubble + streaming placeholder ngay ──────────────
+        val now = System.currentTimeMillis()
         val optUser = Message(
-            id        = "opt_user_$now",
+            id = "opt_user_$now",
             sessionId = AppState.currentSessionId ?: "new",
-            content   = text,
-            sender    = "user",
+            content = text,
+            sender = "user",
             timestamp = now,
             extraData = null
         )
         val optBot = Message(
-            id        = "streaming_$now",
+            id = "streaming_$now",
             sessionId = AppState.currentSessionId ?: "new",
-            content   = "",   // rỗng → Lottie chạy
-            sender    = "bot",
+            content = "",
+            sender = "bot",
             timestamp = now + 1,
             extraData = null
         )
@@ -308,35 +500,122 @@ class ChatFragment : Fragment() {
         adapter.submitList(seedList.toList())
         scrollToBottom()
 
-        // ── 2. Collect stream ─────────────────────────────────────────────
-        streamingJob = lifecycleScope.launch {
+        // ✅ Dùng sendMode để quyết định
+        val isOnline = isNetworkAvailable()
+        val hasModel = llmEngine.isLoaded()
+
+        when {
+            // Không có mạng + có model → bắt buộc offline
+            !isOnline && hasModel -> sendOffline(text, now)
+
+            // Có mạng + có model → theo lựa chọn của user
+            isOnline && hasModel -> {
+                if (sendMode == SendMode.OFFLINE) sendOffline(text, now)
+                else sendOnline(text, now)
+            }
+
+            // Có mạng + không có model → bắt buộc online
+            isOnline && !hasModel -> sendOnline(text, now)
+
+            // Không có mạng + không có model → lỗi
+            else -> {
+                Toast.makeText(requireContext(), "Không có kết nối mạng và chưa tải model", Toast.LENGTH_SHORT).show()
+                isGenerating = false
+                resetSendButton()
+            }
+        }
+    }
+
+    private fun sendOffline(text: String, now: Long) {
+        streamingJob = viewLifecycleOwner.lifecycleScope.launch {
+            val result = chatRepository.sendOfflineMessage(
+                sessionId = AppState.currentSessionId,
+                content = text,
+                onToken = { token ->
+                    // Cập nhật streaming bubble theo từng token
+                    val cur = adapter.currentList.toMutableList()
+                    val idx = cur.indexOfFirst { it.id.startsWith("streaming_") }
+                    if (idx != -1) {
+                        cur[idx] = cur[idx].copy(content = cur[idx].content + token)
+                        adapter.submitList(cur.toList())
+                        AppState.streamingContent = cur[idx].content
+                        scrollToBottom()
+                    }
+                }
+            )
+
+            result.onSuccess { sendResult ->
+                isGenerating = false
+                resetSendButton()
+                isStreaming = false
+                AppState.streamingSessionId = null
+                AppState.streamingContent = ""
+
+                // Cập nhật session nếu mới
+                if (AppState.currentSessionId != sendResult.sessionId) {
+                    AppState.currentSessionId = sendResult.sessionId
+                    binding.tvSessionTitle.text = sendResult.sessionTitle
+                    AppState.currentSession = com.example.autochat.domain.model.ChatSession(
+                        id = sendResult.sessionId,
+                        userId = AppState.currentUserId,
+                        title = sendResult.sessionTitle,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                }
+
+                // Thay streaming bubble bằng message thật
+                val cur = adapter.currentList.toMutableList()
+                val idx = cur.indexOfFirst { it.id.startsWith("streaming_") }
+                val optIdx = cur.indexOfFirst { it.id.startsWith("opt_user_") }
+                if (idx != -1) cur[idx] = sendResult.botMessage
+                if (optIdx != -1) cur[optIdx] = sendResult.userMessage
+                adapter.submitList(cur.toList())
+                scrollToBottom()
+                updateModelStatus()
+            }.onFailure { e ->
+                isStreaming = false
+                isGenerating = false
+                resetSendButton()
+                AppState.streamingSessionId = null
+                AppState.streamingContent = ""
+                // Rollback
+                adapter.submitList(
+                    adapter.currentList.filter {
+                        !it.id.startsWith("streaming_") && !it.id.startsWith("opt_user_")
+                    }
+                )
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Lỗi offline: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun sendOnline(text: String, now: Long) {
+        streamingJob = viewLifecycleOwner.lifecycleScope.launch {
             chatRepository.streamMessage(AppState.currentSessionId, text)
                 .collect { chunk ->
                     when (chunk) {
-
                         is ChatRepository.StreamChunk.Token -> {
                             val cur = adapter.currentList.toMutableList()
                             val idx = cur.indexOfFirst { it.id.startsWith("streaming_") }
                             if (idx != -1) {
                                 cur[idx] = cur[idx].copy(content = cur[idx].content + chunk.text)
                                 adapter.submitList(cur.toList())
-                                AppState.streamingContent = cur[idx].content  // ← lưu content hiện tại
+                                AppState.streamingContent = cur[idx].content
                                 scrollToBottom()
                             }
                         }
-
-                        is ChatRepository.StreamChunk.Done -> {
-                            // Stream văn bản xong — giữ nguyên chờ Meta
-                        }
-
+                        is ChatRepository.StreamChunk.Done -> { /* chờ Meta */ }
                         is ChatRepository.StreamChunk.Meta -> {
                             isStreaming = false
-                            AppState.streamingSessionId = null  // ← clear khi xong
+                            AppState.streamingSessionId = null
                             AppState.streamingContent = ""
                             if (AppState.currentSessionId != chunk.sessionId) {
                                 AppState.currentSessionId = chunk.sessionId
                                 binding.tvSessionTitle.text = chunk.sessionTitle
-                                AppState.currentSession = ChatSession(
+                                AppState.currentSession = com.example.autochat.domain.model.ChatSession(
                                     id = chunk.sessionId,
                                     userId = AppState.currentUserId,
                                     title = chunk.sessionTitle,
@@ -345,36 +624,22 @@ class ChatFragment : Fragment() {
                                 )
                                 webSocketManager.joinSession(chunk.sessionId)
                             }
-
-                            // Xóa optimistic khỏi local - SỬA LẠI CHO ĐÚNG
                             localMessages.removeAll {
                                 it.id.startsWith("streaming_") || it.id.startsWith("opt_user_")
                             }
-
-                            // KHÔNG gọi loadMessages() ở đây
-                            // WebSocket broadcast sẽ trigger setupRealtimeEvents → loadMessages()
-                            // Nếu sau 3s WebSocket chưa về thì mới fallback load
-//                            lifecycleScope.launch {
-//                                delay(3000)
-//                                if (!isStreaming) loadMessages()
-//                            }
+                            updateModelStatus()
                         }
-
                         is ChatRepository.StreamChunk.Error -> {
-                            // Rollback toàn bộ optimistic messages
-                            AppState.streamingSessionId = null  // ← clear khi xong
+                            isStreaming = false
+                            AppState.streamingSessionId = null
                             AppState.streamingContent = ""
                             adapter.submitList(
                                 adapter.currentList.filter {
-                                    !it.id.startsWith("streaming_") && !it.id.startsWith("opt_user_")  // ← SỬA Ở ĐÂY
+                                    !it.id.startsWith("streaming_") && !it.id.startsWith("opt_user_")
                                 }
                             )
                             if (isAdded) {
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Lỗi: ${chunk.message}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(requireContext(), "Lỗi: ${chunk.message}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -489,7 +754,7 @@ class ChatFragment : Fragment() {
                 }
             }
         } else {
-            Log.d("ChatFragment", "📝 Normal load for session $sessionId")
+            Log.d("ChatFragment", "Normal load for session $sessionId")
             isStreaming = false
             adapter.submitList(emptyList())
             loadMessages()

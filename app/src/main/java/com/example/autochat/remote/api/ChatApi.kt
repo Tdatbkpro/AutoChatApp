@@ -40,7 +40,7 @@ interface ChatApi {
     )
 
     // ChatApi.kt
-    @PATCH("sessions/{sessionId}")
+    @PATCH("chat/session/{sessionId}")
     suspend fun updateSessionTitle(
         @Header("Authorization") token: String,
         @Path("sessionId") sessionId: String,
@@ -56,4 +56,16 @@ interface ChatApi {
         @Header("Authorization") token: String,
         @Path("id") sessionId: String
     ) : Response<Unit>
+    // Trong file ChatApi.kt
+
+    @PATCH("chat/sessions/{session_id}/pin")
+    suspend fun togglePinSession(
+        @Header("Authorization") token: String,
+        @Path("session_id") sessionId: String
+    ): Response<Map<String, Any>>
+
+    @POST("chat/sync/offline-messages")
+    suspend fun syncOfflineMessages(
+        @Body messages: List<Map<String, Any>>
+    ): Response<Map<String, Any>>
 }

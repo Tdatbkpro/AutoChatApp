@@ -22,27 +22,63 @@ class HistoryViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     init {
-        // ✅ Observe từ Room (sẽ tự động cập nhật khi có thay đổi)
+        // Observe sessions flow
         viewModelScope.launch {
             chatRepository.getSessionsFlow().collect { sessionList ->
                 _sessions.value = sessionList
             }
         }
-
     }
-
-
 
     fun deleteSession(sessionId: String) {
         viewModelScope.launch {
             try {
+                _isLoading.value = true
                 chatRepository.deleteSession(sessionId)
-                // ✅ Flow sẽ tự động cập nhật, không cần làm gì thêm
+                _error.value = null
             } catch (e: Exception) {
+                _error.value = "Không thể xóa: ${e.message}"
                 android.util.Log.e("HistoryViewModel", "Delete error: ${e.message}")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
+    fun renameSession(sessionId: String, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                chatRepository.updateSessionTitle(sessionId, newTitle)
+                _error.value = null
+                android.util.Log.d("HistoryViewModel", "Renamed session $sessionId to $newTitle")
+            } catch (e: Exception) {
+                _error.value = "Không thể đổi tên: ${e.message}"
+                android.util.Log.e("HistoryViewModel", "Rename error: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun togglePinSession(sessionId: String) {
+        viewModelScope.launch {
+            try {
+                chatRepository.togglePinSession(sessionId)
+                _error.value = null
+                android.util.Log.d("HistoryViewModel", "Toggled pin for session $sessionId")
+            } catch (e: Exception) {
+                _error.value = "Lỗi: ${e.message}"
+                android.util.Log.e("HistoryViewModel", "Pin toggle error: ${e.message}")
+            }
+        }
+    }
+
+    fun clearError() {
+        _error.value = null
+    }
 }

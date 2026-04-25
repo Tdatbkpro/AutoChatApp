@@ -46,7 +46,21 @@
             android:name="sessionTitle"
             app:argType="string"/>
     </fragment>
-
+    <fragment
+        android:id="@+id/modelManagerFragment"
+        android:name="com.example.autochat.ui.phone.fragment.ModelManagerFragment"
+        android:label="ModelManagerFragment">
+        <action
+            android:id="@+id/action_modelManager_to_chat"
+            app:destination="@id/chatFragment" />
+        <action
+            android:id="@+id/action_modelManager_to_hfTokenManager"
+            app:destination="@id/hfTokenManagerFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/hfTokenManagerFragment"
+        android:name="com.example.autochat.ui.phone.fragment.HFTokenManagerFragment"
+        android:label="HF Token Manager" />
     <fragment
         android:id="@+id/profileFragment"
         android:name="com.example.autochat.ui.phone.fragment.ProfileFragment"

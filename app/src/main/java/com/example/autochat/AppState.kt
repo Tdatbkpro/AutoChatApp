@@ -9,10 +9,11 @@ object AppState {
     var chatScreen: MyChatScreen? = null
     var voiceScreen: VoiceSearchScreen? = null
     var currentSession: ChatSession? = null
-    var currentSessionId : String? = null
+    var currentSessionId: String? = null
         set(value) {
-            android.util.Log.e("AppState", "currentSessionId changed: $field → $value", Exception("stacktrace"))
+            val old = field  // gán ra biến local trước
             field = value
+            android.util.Log.e("AppState", "currentSessionId changed: $old → $value", Exception("stacktrace"))
         }
     // Auth
     var accessToken: String? = null

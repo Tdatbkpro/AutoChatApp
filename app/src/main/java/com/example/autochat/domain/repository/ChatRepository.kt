@@ -1,5 +1,6 @@
 package com.example.autochat.domain.repository
 
+import com.example.autochat.data.local.entity.MessageEntity
 import com.example.autochat.domain.model.Article
 import com.example.autochat.domain.model.ChatSession
 import com.example.autochat.domain.model.Message
@@ -56,7 +57,14 @@ interface ChatRepository {
     suspend fun getNextArticle(currentId: Int, category: String?, seenIds: List<Int> = emptyList()): Article?
     suspend fun getStructuredData(query: String): StructuredDataResponse?
     suspend fun getMessages(sessionId: String): List<Message>
-
+    // Thêm vào interface ChatRepository
+    fun getOfflineMessagesFlow(sessionId: String): Flow<List<MessageEntity>>
+    suspend fun sendOfflineMessage(
+        sessionId: String?,
+        content: String,
+        onToken: (String) -> Unit
+    ): Result<SendMessageResult>
+    suspend fun togglePinSession(sessionId: String)
     data class SendMessageResult(
         val userMessage: Message,
         val sessionId: String,

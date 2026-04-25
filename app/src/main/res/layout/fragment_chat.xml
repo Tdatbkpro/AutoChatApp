@@ -19,21 +19,57 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Đổi id cho rõ ràng -->
-        <TextView
-            android:id="@+id/connectionStatusBar"
-            android:layout_width="0dp"
-            android:layout_height="28dp"
-            android:background="#1A3A5C"
-            android:text="Đang kết nối lại..."
-            android:textColor="#4A90E2"
-            android:textSize="11sp"
-            android:gravity="center"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/toolbar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+        <!-- Nút menu bên trái -->
+        <ImageButton
+            android:id="@+id/btnMenu"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_menu"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            app:tint="#AAAACC"/>
 
+        <!-- Model status button ở giữa -->
+        <LinearLayout
+            android:id="@+id/btnModelStatus"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_model_status"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="12dp">
+
+            <ImageView
+                android:id="@+id/ivModelIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_ai_model"
+                app:tint="#4A90E2"
+                android:layout_marginEnd="6dp"/>
+
+            <TextView
+                android:id="@+id/tvModelStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chọn model"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="#888899"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
+        <!-- Nút chat mới + session title bên phải -->
         <TextView
             android:id="@+id/tvSessionTitle"
             android:layout_width="0dp"
@@ -41,33 +77,21 @@
             android:layout_weight="1"
             android:text="Chat mới"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end"/>
-
-        <Button
-            android:id="@+id/btnNewChat"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="+ Chat mới"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:background="@drawable/bg_button_new_chat"
-            android:textColor="#4A90E2"
-            android:paddingHorizontal="12dp"
-            android:stateListAnimator="@null"
-            android:elevation="0dp"/>
+            android:textSize="15sp"
+            android:textStyle="normal"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:gravity="end"/>
 
         <ImageButton
-            android:id="@+id/btnMenu"
+            android:id="@+id/btnNewChat"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/ic_menu"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="12dp"
+            android:src="@drawable/ic_add_message"
+            android:background="?android:selectableItemBackgroundBorderless"
             android:padding="8dp"
-            app:tint="#AAAACC"/>
+            app:tint="#31B1BD"/>
     </LinearLayout>
 
     <!-- Connection status bar -->
@@ -331,15 +355,26 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="10dp"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="8dp"
         android:gravity="center_vertical"
-        android:background="#12121A"
+        android:background="#0D0D14"
         android:elevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Mic button -->
+        <ImageButton
+            android:id="@+id/btnMic"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_mic"
+            android:background="@drawable/bg_circle_dark"
+            android:layout_marginEnd="8dp"
+            android:elevation="2dp" />
+
+        <!-- Text Input -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilMessage"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -348,12 +383,13 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             app:boxStrokeWidth="1dp"
-            app:boxStrokeColor="#2A2A3A"
+            app:boxStrokeColor="#2A2A3E"
             app:boxCornerRadiusTopStart="24dp"
             app:boxCornerRadiusTopEnd="24dp"
             app:boxCornerRadiusBottomStart="24dp"
             app:boxCornerRadiusBottomEnd="24dp"
-            app:hintTextColor="#666688">
+            app:boxBackgroundColor="#1A1A2E"
+            app:hintEnabled="false">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etMessage"
@@ -365,30 +401,35 @@
                 android:maxLines="4"
                 android:inputType="textMultiLine"
                 android:imeOptions="actionSend"
+                android:paddingHorizontal="14dp"
                 android:paddingVertical="10dp"
-                android:lineSpacingMultiplier="1.2"/>
+                android:lineSpacingMultiplier="1.2"
+                android:background="@android:color/transparent" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Send button -->
+        <!-- ✅ THÊM: Toggle Online/Offline (chỉ hiện khi có model + có mạng) -->
+        <ImageButton
+            android:id="@+id/btnToggleMode"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_offline"
+            android:background="@drawable/bg_circle_dark"
+            android:layout_marginEnd="8dp"
+            android:elevation="2dp"
+            android:visibility="gone"
+            android:contentDescription="Chuyển chế độ Online/Offline"
+            app:tint="#4CAF50" />
+
+        <!-- Send/Pause button -->
         <ImageButton
             android:id="@+id/btnSend"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:src="@drawable/ic_send"
             android:background="@drawable/bg_circle_blue"
-            android:layout_marginEnd="4dp"
             android:elevation="2dp"
-            android:translationZ="2dp"/>
-
-        <!-- Mic button -->
-        <ImageButton
-            android:id="@+id/btnMic"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:src="@drawable/ic_mic"
-            android:background="@drawable/bg_circle_dark"
-            android:elevation="2dp"
-            android:translationZ="2dp"/>
+            android:alpha="0.4"
+            android:enabled="false" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

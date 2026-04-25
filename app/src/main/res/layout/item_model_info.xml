@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="#1E1E2E"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#2A2A3E"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header: Icon + Info + Quick Actions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Model Icon with gradient background -->
+            <FrameLayout
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="14dp">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_ai_model"
+                    android:background="@drawable/bg_gradient"
+                    android:padding="12dp"
+                    app:tint="#6C63FF" />
+
+                <!-- Download badge -->
+                <ImageView
+                    android:id="@+id/ivDownloadedBadge"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/ic_check_circle"
+                    android:visibility="gone"
+                    app:tint="#4CAF50" />
+            </FrameLayout>
+
+            <!-- Model Name + Description -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvModelName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tvModelDesc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#9CA3AF"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+                <!-- Tags row -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="6dp">
+
+                    <TextView
+                        android:id="@+id/tvModelSize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#6B7280"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_tag"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp" />
+
+                    <TextView
+                        android:id="@+id/tvModelFormat"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GGUF"
+                        android:textColor="#6B7280"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_tag"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:layout_marginStart="6dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Progress Section (visible during download) -->
+        <LinearLayout
+            android:id="@+id/layoutProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="14dp"
+            android:visibility="gone">
+
+            <!-- Progress info row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvProgressPercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="45%"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvDownloadedSize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1.2 GB / 2.6 GB"
+                        android:textColor="#9CA3AF"
+                        android:textSize="11sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="end">
+
+                    <TextView
+                        android:id="@+id/tvSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12.5 MB/s"
+                        android:textColor="#6C63FF"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvEta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Còn 1:30 phút"
+                        android:textColor="#9CA3AF"
+                        android:textSize="11sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Progress bar -->
+            <ProgressBar
+                android:id="@+id/progressDownload"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:max="100"
+                android:progress="45"
+                android:progressTint="#6C63FF"
+                android:progressBackgroundTint="#2A2A3E" />
+
+            <!-- Pause/Resume button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPauseResume"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Tạm dừng"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#FF9800"
+                app:cornerRadius="18dp"
+                app:icon="@drawable/ic_pause"
+                app:iconSize="16dp"
+                android:paddingHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_gravity="center_horizontal" />
+        </LinearLayout>
+
+        <!-- Downloaded Section -->
+        <LinearLayout
+            android:id="@+id/layoutDownloaded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelect"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Sử dụng model"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#6C63FF"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_play"
+                app:iconSize="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="20dp"
+                app:iconTint="#FF6B6B"
+                app:backgroundTint="#2A2A3E"
+                app:cornerRadius="22dp"
+                app:strokeColor="#FF6B6B"
+                app:strokeWidth="1dp" />
+        </LinearLayout>
+
+        <!-- Download Button (initial state) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDownload"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="14dp"
+            android:text="Tải về"
+            android:textSize="13sp"
+            android:textColor="#FFFFFF"
+            app:backgroundTint="#6C63FF"
+            app:cornerRadius="22dp"
+            app:icon="@drawable/ic_download"
+            app:iconSize="18dp"
+            android:visibility="gone" />
+
+        <!-- Active badge -->
+        <LinearLayout
+            android:id="@+id/layoutActive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/bg_dot_green" />
+
+            <TextView
+                android:id="@+id/tvActive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Đang hoạt động"
+                android:textColor="#4CAF50"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
