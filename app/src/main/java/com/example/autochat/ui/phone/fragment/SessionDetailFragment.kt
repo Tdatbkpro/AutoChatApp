@@ -78,9 +78,14 @@ class SessionDetailFragment : Fragment() {
 
     private fun setupRecyclerView() {
         // Dùng lại ChatMessageAdapter để tự động xử lý news_list
-        messageAdapter = ChatMessageAdapter { articleId, title, description ->
-            openArticleDetail(articleId, title, description)
-        }
+        messageAdapter = ChatMessageAdapter(
+            onNewsItemClick = { articleId, title, description ->
+                openArticleDetail(articleId, title, description)
+            },
+            onRetry        = {},          // default
+            onEdit         = { _, _ -> }, // default
+            onSwitchBranch = { _, _ -> }, // default
+        )
 
         binding.recyclerViewMessages.apply {
             layoutManager = LinearLayoutManager(requireContext())

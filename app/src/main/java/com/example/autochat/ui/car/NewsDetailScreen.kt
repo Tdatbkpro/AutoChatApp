@@ -231,13 +231,15 @@ class NewsDetailScreen(
                     seenIds   = excludeIds
                 )
 
-                if (next != null) {
+                if (next != null && next.id != null) {  // ✅ Check next.id != null
+                    val nextId = next.id  // ✅ Lưu lại để dùng
+
                     // Hiện dialog với title bài mới
                     showNextArticleDialog(
                         nextTitle    = next.title,
                         nextCategory = next.category,
                         onConfirm    = {
-                            seenArticleIds.add(next.id)
+                            seenArticleIds.add(nextId)  // ✅ Dùng nextId đã check null
                             val nextContent = buildString {
                                 if (!next.description.isNullOrBlank()) append(next.description).append("\n\n")
                                 if (!next.content.isNullOrBlank()) append(next.content)
@@ -247,7 +249,7 @@ class NewsDetailScreen(
                                 NewsDetailScreen(
                                     carContext        = carContext,
                                     chatScreen        = chatScreen,
-                                    articleId         = next.id,
+                                    articleId         = nextId,  // ✅ Dùng nextId
                                     fallbackTitle     = next.title,
                                     fallbackContent   = nextContent,
                                     allowAutoAdvance  = true,

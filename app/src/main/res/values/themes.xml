@@ -1,9 +1,35 @@
-    <resources>
-        <style name="Theme.AutoChat" parent="Theme.Material3.Light.NoActionBar">
-            <item name="android:windowIsTranslucent">true</item>
-            <item name="android:windowBackground">@android:color/transparent</item>
-            <item name="android:windowContentOverlay">@null</item>
-            <item name="android:windowNoTitle">true</item>
-            <item name="android:backgroundDimEnabled">false</item>
-        </style>
-    </resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AutoChat" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <style name="ExpandedTitle" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">28sp</item>
+    </style>
+
+    <style name="CollapsedTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="BottomSheetRunCodeTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/BottomSheetRunCodeAnimation</item>
+        <item name="bottomSheetStyle">@style/BottomSheetRunCodeStyle</item>
+    </style>
+
+    <style name="BottomSheetRunCodeAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
+
+    <style name="BottomSheetRunCodeStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+</resources>

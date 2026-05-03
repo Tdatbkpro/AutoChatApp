@@ -1,47 +1,41 @@
 package com.example.autochat.ui.phone.fragment
 
+import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.view.LayoutInflater
 import android.view.Menu
-import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-
+import com.bumptech.glide.Glide
 import com.example.autochat.R
 import com.example.autochat.databinding.FragmentArticleDetailBinding
 import com.example.autochat.di.ChatEntryPoint
 import com.example.autochat.domain.model.Article
+import com.example.autochat.domain.model.MediaItem
 import com.example.autochat.domain.repository.ChatRepository
+import com.github.chrisbanes.photoview.PhotoView
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.MediaItem as ExoMediaItem
+import com.google.android.exoplayer2.ui.StyledPlayerView
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.ceil
 
-/**
- * Hiển thị chi tiết bài báo trên điện thoại.
- * Có đầy đủ ảnh (khác với Android Auto không có ảnh).
- *
- * Args:
- *   articleId   : Int  — ID bài báo (−1 nếu không có)
- *   title       : String — tiêu đề fallback
- *   description : String — mô tả fallback
- *
- * Layout: fragment_article_detail.xml
- *   - toolbar          : Toolbar với nút back + share
- *   - ivThumbnail      : ImageView ảnh thumbnail (GONE nếu không có)
- *   - tvTitle          : tiêu đề bài báo
- *   - tvMeta           : "dd/MM/yyyy • Danh mục"
- *   - tvDescription    : mô tả / sapo
- *   - tvContent        : nội dung bài báo (đã clean)
- *   - progressBar      : loading
- *   - tvError          : thông báo lỗi
- *   - fabTts           : FloatingActionButton đọc bài
- *   - scrollView       : ScrollView bọc content
- */
 class ArticleDetailFragment : Fragment(), TextToSpeech.OnInitListener {
 
     private var _binding: FragmentArticleDetailBinding? = null
@@ -57,18 +51,43 @@ class ArticleDetailFragment : Fragment(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var articleUrl: String? = null
-    private var fullText: String = ""   // để TTS đọc
-
+    private var fullText: String = ""
+    private var articleId: Int = -1
+    private var exoPlayer: ExoPlayer? = null
+    private var fullscreenDialog: android.app.Dialog? = null
+    private var fullscreenPlayer: ExoPlayer? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
         tts = TextToSpeech(requireContext(), this)
     }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            tts?.language = Locale("vi", "VN")
+            val langResult = tts?.setLanguage(Locale("vi", "VN"))
+            if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                tts?.language = Locale.US
+            }
             ttsReady = true
+
+            // ✅ Debug listener
+            tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    android.util.Log.d("TTS", "Started: $utteranceId")
+                }
+                override fun onDone(utteranceId: String?) {
+                    android.util.Log.d("TTS", "Done: $utteranceId")
+                    activity?.runOnUiThread {
+                        binding.fabTts.setImageResource(R.drawable.ic_headphones)
+                    }
+                }
+                override fun onError(utteranceId: String?) {
+                    android.util.Log.e("TTS", "Error: $utteranceId")
+                }
+            })
+
+            android.util.Log.d("TTS", "TTS initialized with language: ${tts?.language}")
+        } else {
+            android.util.Log.e("TTS", "Init failed: $status")
         }
     }
 
@@ -84,149 +103,129 @@ class ArticleDetailFragment : Fragment(), TextToSpeech.OnInitListener {
         super.onViewCreated(view, savedInstanceState)
 
         setupToolbar()
+        setupClickListeners()
 
-        val articleId = arguments?.getInt("articleId", -1) ?: -1
+        articleId = arguments?.getInt("articleId", -1) ?: -1
         val fallbackTitle = arguments?.getString("title") ?: ""
         val fallbackDesc = arguments?.getString("description") ?: ""
 
-        // Hiện fallback ngay lập tức trong khi load
         binding.tvTitle.text = fallbackTitle
-        binding.tvDescription.text = fallbackDesc
         fullText = "$fallbackTitle. $fallbackDesc"
 
         if (articleId != -1) {
             loadArticle(articleId, fallbackTitle, fallbackDesc)
         } else {
-            // Không có ID, chỉ dùng fallback
-            binding.progressBar.visibility = View.GONE
-            binding.scrollView.visibility = View.VISIBLE
-        }
-
-        binding.fabTts.setOnClickListener {
-            toggleTts()
+            showContent()
         }
     }
 
     private fun setupToolbar() {
-        binding.toolbar.apply {
-            setNavigationOnClickListener {
-                requireActivity().onBackPressedDispatcher.onBackPressed()
-            }
-            title = "Chi tiết bài báo"
+        binding.toolbar.setNavigationOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()  // ✅ Nút back
+        }
+        binding.toolbar.title = "Chi tiết"
+
+        binding.btnShare.setOnClickListener { shareArticle() }
+        binding.btnSettings.setOnClickListener {
+            Toast.makeText(requireContext(), "Cài đặt sau", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setupClickListeners() {
+        binding.fabTts.setOnClickListener { toggleTts() }
+        binding.btnRetry.setOnClickListener {
+            loadArticle(articleId,
+                arguments?.getString("title") ?: "",
+                arguments?.getString("description") ?: "")
         }
     }
 
     private fun loadArticle(articleId: Int, fallbackTitle: String, fallbackDesc: String) {
-        binding.progressBar.visibility = View.VISIBLE
-        binding.scrollView.visibility = View.GONE
-
+        showLoading()
         lifecycleScope.launch {
             try {
                 val article = chatRepository.getArticleById(articleId)
-
                 if (article != null) {
                     renderArticle(article)
                 } else {
-                    // Fallback
-                    binding.tvTitle.text = fallbackTitle
-                    binding.tvDescription.text = fallbackDesc
-                    binding.tvContent.text = fallbackDesc
-                    fullText = "$fallbackTitle. $fallbackDesc"
-                    binding.progressBar.visibility = View.GONE
-                    binding.scrollView.visibility = View.VISIBLE
+                    showFallback(fallbackTitle, fallbackDesc)
                 }
-
             } catch (e: Exception) {
-                android.util.Log.e("ARTICLE_DETAIL", "loadArticle error: ${e.message}")
-                // Graceful fallback thay vì hiện error
-                binding.tvTitle.text = fallbackTitle
-                binding.tvDescription.text = fallbackDesc
-                binding.progressBar.visibility = View.GONE
-                binding.scrollView.visibility = View.VISIBLE
+                android.util.Log.e("ARTICLE_DETAIL", "loadArticle error", e)
+                showFallback(fallbackTitle, fallbackDesc)
             }
         }
     }
 
     private fun renderArticle(article: Article) {
-        binding.tvTitle.text = article.title
-        binding.toolbar.title = article.title.take(40)
+        binding.apply {
+            tvTitle.text = article.title
+            toolbar.title = article.title?.take(30)?.let {
+                it + if ((article.title?.length ?: 0) > 30) "..." else ""
+            } ?: "Chi tiết"
 
-        // Meta: ngày + danh mục
-        val meta = listOfNotNull(article.publishedDate, article.category)
-            .joinToString(" • ")
-        binding.tvMeta.text = meta
-        binding.tvMeta.visibility = if (meta.isNotBlank()) View.VISIBLE else View.GONE
+            // ✅ Category chip
+            if (!article.category.isNullOrBlank()) {
+                chipCategory.text = article.category.uppercase()
+                chipCategory.visibility = View.VISIBLE
+            } else {
+                chipCategory.visibility = View.GONE
+            }
 
-        // Description / sapo
-        if (!article.description.isNullOrBlank()) {
-            binding.tvDescription.text = article.description
-            binding.tvDescription.visibility = View.VISIBLE
-        } else {
-            binding.tvDescription.visibility = View.GONE
-        }
+            // ✅ Author
+            if (!article.author.isNullOrBlank()) {
+                tvAuthor.text = article.author
+                tvAuthorMeta.text = article.publishedDate ?: ""
+                authorBar.visibility = View.VISIBLE
+            }
 
-        // Content đã clean (bỏ [HÌNH ẢNH:...], [VIDEO:...], markdown, URL)
-        val cleanContent = cleanContent(article.content ?: "")
-        binding.tvContent.text = cleanContent
+            tvDate.text = article.publishedDate ?: ""
+            val readTime = maxOf(1, ceil((article.content?.length ?: 0) / 1000.0).toInt())
+            tvReadTime.text = "${readTime} phút đọc"
 
-        // TTS sẽ đọc: title + description + content
-        fullText = buildString {
-            append(article.title)
-            append(". ")
             if (!article.description.isNullOrBlank()) {
-                append(article.description)
+                tvDescription.text = article.description
+                tvDescription.visibility = View.VISIBLE
+            } else {
+                tvDescription.visibility = View.GONE
+            }
+
+            // ✅ Link button
+            articleUrl = article.url
+            if (!article.url.isNullOrBlank()) {
+                btnSourceLink.visibility = View.VISIBLE
+                btnSourceLink.setOnClickListener {
+                    openUrl(article.url)
+                }
+            } else {
+                btnSourceLink.visibility = View.GONE
+            }
+
+            renderMixedContent(article)
+
+            fullText = buildString {
+                append(article.title ?: "")
                 append(". ")
+                if (!article.description.isNullOrBlank()) {
+                    append(article.description)
+                    append(". ")
+                }
+                // Lấy text content đã clean (không có placeholder)
+                val cleanContent = article.content
+                    ?.replace(Regex("\\[HÌNH ẢNH:[^\\]]*\\]"), "")
+                    ?.replace(Regex("\\[VIDEO:[^\\]]*\\]"), "")
+                    ?.replace(Regex("<[^>]*>"), "")
+                    ?: ""
+                append(cleanContent.take(5000))
             }
-            append(cleanContent.take(3000))
-        }
 
-        // Link gốc
-        articleUrl = article.url
-        if (!article.url.isNullOrBlank()) {
-            binding.tvSourceLink.visibility = View.VISIBLE
-            binding.tvSourceLink.text = "🔗 Đọc bài gốc"
-            binding.tvSourceLink.setOnClickListener {
-                openUrl(article.url)
-            }
-        }
+            android.util.Log.d("TTS", "fullText length: ${fullText.length}")
 
-        binding.progressBar.visibility = View.GONE
-        binding.scrollView.visibility = View.VISIBLE
-    }
-
-    /**
-     * Xóa các placeholder media và markdown để hiển thị text sạch.
-     * (Ảnh sẽ được hiển thị riêng trong layout nếu cần trong tương lai)
-     */
-    private fun cleanContent(content: String): String {
-        return content
-            .replace(Regex("\\[HÌNH ẢNH:[^\\]]*\\]"), "")
-            .replace(Regex("\\[VIDEO:[^\\]]*\\]"), "")
-            .replace(Regex("\\*\\*([^*]+)\\*\\*"), "$1")
-            .replace(Regex("\\[([^\\]]+)\\]\\([^)]+\\)"), "$1")
-            .replace(Regex("https?://\\S+"), "")
-            .lines()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .joinToString("\n\n")
-    }
-
-    private fun toggleTts() {
-        if (tts?.isSpeaking == true) {
-            tts?.stop()
-            binding.fabTts.setImageResource(android.R.drawable.ic_media_play)
-            Toast.makeText(requireContext(), "Đã dừng đọc", Toast.LENGTH_SHORT).show()
-        } else {
-            if (!ttsReady) {
-                Toast.makeText(requireContext(), "TTS chưa sẵn sàng", Toast.LENGTH_SHORT).show()
-                return
-            }
-            tts?.speak(fullText, TextToSpeech.QUEUE_FLUSH, null, "article_tts")
-            binding.fabTts.setImageResource(android.R.drawable.ic_media_pause)
-            Toast.makeText(requireContext(), "Đang đọc bài báo...", Toast.LENGTH_SHORT).show()
+            showContent()
         }
     }
 
+    // ✅ Thêm hàm openUrl
     private fun openUrl(url: String?) {
         if (url.isNullOrBlank()) return
         try {
@@ -236,38 +235,354 @@ class ArticleDetailFragment : Fragment(), TextToSpeech.OnInitListener {
             )
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Không mở được link", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Không thể mở link", Toast.LENGTH_SHORT).show()
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_article, menu)
+    private fun renderMixedContent(article: Article) {
+        val container = binding.mixedContentContainer
+        container.removeAllViews()
+
+        val content = article.content ?: ""
+        val mediaItems = article.mediaItems ?: emptyList()
+
+        // Tạo map: vị trí [HÌNH ẢNH] -> MediaItem
+        val mediaMap = mutableMapOf<Int, MediaItem>()
+        var mediaIndex = 0
+
+        // Tìm tất cả vị trí [HÌNH ẢNH] và [VIDEO]
+        val mediaPlaceholders = Regex("\\[(HÌNH ẢNH|VIDEO):[^\\]]*\\]").findAll(content).toList()
+
+        // Parse content và chèn media vào đúng vị trí
+        var lastIndex = 0
+        for (placeholder in mediaPlaceholders) {
+            // Add text trước placeholder
+            val textBefore = content.substring(lastIndex, placeholder.range.first).trim()
+            if (textBefore.isNotBlank()) {
+                container.addView(createTextView(textBefore))
+            }
+
+            // Add media tương ứng
+            if (mediaIndex < mediaItems.size) {
+                val media = mediaItems[mediaIndex]
+                when (media.type) {
+                    "image" -> container.addView(createImageView(media))
+                    "video" -> container.addView(createVideoView(media))
+                }
+                mediaIndex++
+            }
+
+            lastIndex = placeholder.range.last + 1
+        }
+
+        // Add text còn lại sau placeholder cuối cùng
+        val textAfter = content.substring(lastIndex).trim()
+        if (textAfter.isNotBlank()) {
+            container.addView(createTextView(textAfter))
+        }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_share -> {
-                shareArticle()
-                true
+    private fun createTextView(text: String): TextView {
+        return TextView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 12
+                bottomMargin = 12
             }
-            else -> super.onOptionsItemSelected(item)
+            this.text = cleanText(text)
+            setTextColor(0xFFD0D0E8.toInt())
+            textSize = 15f
+            setLineSpacing(0f, 1.65f)
+            setTextIsSelectable(true)  // ✅ Đã có rồi
+            // Thêm custom selection action mode để có nút copy
+            customSelectionActionModeCallback = object : android.view.ActionMode.Callback {
+                override fun onCreateActionMode(mode: android.view.ActionMode?, menu: Menu?): Boolean {
+                    menu?.add(0, android.R.id.copy, 0, "Copy")?.setIcon(android.R.drawable.ic_menu_edit)
+                    return true
+                }
+                override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: Menu?): Boolean = false
+                override fun onActionItemClicked(mode: android.view.ActionMode?, item: MenuItem?): Boolean {
+                    if (item?.itemId == android.R.id.copy) {
+                        val clipboard = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("text", this@apply.text)
+                        clipboard.setPrimaryClip(clip)
+                        mode?.finish()
+                        Toast.makeText(requireContext(), "Đã copy", Toast.LENGTH_SHORT).show()
+                        return true
+                    }
+                    return false
+                }
+                override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
+            }
+        }
+    }
+
+    private fun createImageView(media: MediaItem): View {
+        val container = LinearLayout(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 8
+                bottomMargin = 8
+            }
+            orientation = LinearLayout.VERTICAL
+        }
+
+        val imageView = ImageView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(220)
+            )
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(0xFF1A1A2E.toInt())
+            isClickable = true
+            isFocusable = true
+
+            // ✅ Sửa: chỉ truyền url
+            setOnClickListener {
+                showFullscreenImage(media.url)
+            }
+        }
+
+        Glide.with(this)
+            .load(media.url)
+            .placeholder(R.drawable.placeholder_image)
+            .error(R.drawable.placeholder_image)
+            .centerCrop()
+            .into(imageView)
+
+        container.addView(imageView)
+
+        (media.caption ?: media.description)?.let { caption ->
+            val captionView = TextView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 6 }
+                text = cleanText(caption)
+                textSize = 12f
+                setTextColor(0xFF888899.toInt())
+                setTypeface(typeface, Typeface.ITALIC)
+                textAlignment = View.TEXT_ALIGNMENT_CENTER
+                setPadding(16, 4, 16, 4)
+            }
+            container.addView(captionView)
+        }
+
+        return container
+    }
+
+    private fun createVideoView(media: MediaItem): View {
+        val container = LinearLayout(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 8
+                bottomMargin = 8
+            }
+            orientation = LinearLayout.VERTICAL
+        }
+
+        // FrameLayout để overlay nút fullscreen
+        val frameLayout = FrameLayout(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(220)
+            )
+        }
+
+        val playerView = PlayerView(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            useController = true
+        }
+
+        exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
+            setMediaItem(ExoMediaItem.fromUri(Uri.parse(media.url ?: "")))
+            prepare()
+            playWhenReady = false
+        }
+        playerView.player = exoPlayer
+
+        frameLayout.addView(playerView)
+
+        // ✅ Nút fullscreen overlay
+        val btnFullscreen = ImageView(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                dpToPx(30),
+                dpToPx(30),
+                android.view.Gravity.BOTTOM or android.view.Gravity.END
+            ).apply {
+                bottomMargin = 100
+            }
+            setImageResource(R.drawable.ic_zoom)
+            setColorFilter(0xFFFFFFFF.toInt())
+            setBackgroundColor(0x80000000.toInt())
+            setPadding(6, 6, 6, 6)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                openFullscreenVideo(media.url)
+            }
+        }
+        frameLayout.addView(btnFullscreen)
+
+        container.addView(frameLayout)
+
+        (media.caption ?: media.description)?.let { caption ->
+            val captionView = TextView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 6 }
+                text = cleanText(caption)
+                textSize = 12f
+                setTextColor(0xFF888899.toInt())
+                setTypeface(typeface, Typeface.ITALIC)
+                textAlignment = View.TEXT_ALIGNMENT_CENTER
+            }
+            container.addView(captionView)
+        }
+
+        return container
+    }
+
+    // ✅ Mở fullscreen video
+    private fun openFullscreenVideo(url: String?) {
+        if (url.isNullOrBlank()) return
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse(url), "video/*")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: mở browser
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            startActivity(intent)
+        }
+    }
+
+    // ✅ Chỉ còn dialog cho ảnh
+    private fun showFullscreenImage(url: String?) {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_media_fullscreen, null)
+
+        val ivFullscreen = dialogView.findViewById<PhotoView>(R.id.ivFullscreen)
+        val btnClose = dialogView.findViewById<ImageButton>(R.id.btnClose)
+
+        Glide.with(this)
+            .load(url)
+            .into(ivFullscreen)
+
+        fullscreenDialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+            setContentView(dialogView)
+            setCancelable(true)
+            window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            show()
+        }
+
+        btnClose.setOnClickListener { fullscreenDialog?.dismiss() }
+        ivFullscreen.setOnClickListener { fullscreenDialog?.dismiss() }
+    }
+
+
+
+    private fun cleanText(text: String): String {
+        return text
+            .replace(Regex("<[^>]*>"), "")
+            .replace(Regex("&[a-z]+;"), "")
+            .replace(Regex("\\*\\*([^*]+)\\*\\*"), "$1")
+            .replace(Regex("\\[([^\\]]+)\\]\\([^)]+\\)"), "$1")
+            .trim()
+    }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+
+    private fun showLoading() {
+        binding.progressBar.isVisible = true
+        binding.scrollView.isVisible = false
+        binding.errorContainer.isVisible = false
+    }
+
+    private fun showContent() {
+        binding.progressBar.isVisible = false
+        binding.scrollView.isVisible = true
+    }
+
+    private fun showFallback(title: String, description: String) {
+        binding.tvTitle.text = title
+        binding.tvDescription.text = description
+        binding.tvDescription.visibility = View.VISIBLE
+        fullText = "$title. $description"
+        showContent()
+    }
+
+    private fun toggleTts() {
+        if (tts?.isSpeaking == true) {
+            tts?.stop()
+            binding.fabTts.setImageResource(R.drawable.ic_headphones)
+            Toast.makeText(requireContext(), "Đã dừng đọc", Toast.LENGTH_SHORT).show()
+        } else {
+            if (!ttsReady) {
+                Toast.makeText(requireContext(), "TTS đang khởi tạo, thử lại...", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (fullText.isBlank()) {
+                Toast.makeText(requireContext(), "Không có nội dung", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // ✅ Giới hạn text 4000 ký tự (giới hạn của TTS)
+            val textToSpeak = if (fullText.length > 4000) fullText.take(4000) else fullText
+
+            // ✅ Set speech rate chậm hơn
+            tts?.setSpeechRate(0.9f)
+
+            val utteranceId = "article_${System.currentTimeMillis()}"
+            val result = tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+
+            android.util.Log.d("TTS", "speak result: $result, text length: ${textToSpeak.length}")
+
+            if (result == TextToSpeech.SUCCESS) {
+                binding.fabTts.setImageResource(R.drawable.ic_pause)
+            } else {
+                // ✅ Thử lại lần nữa
+                ttsReady = false
+                tts = TextToSpeech(requireContext(), this)
+                Toast.makeText(requireContext(), "Đang thử lại...", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun shareArticle() {
-        val url = articleUrl ?: return
-        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(android.content.Intent.EXTRA_TEXT, url)
+        articleUrl?.let {
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, it)
+            }
+            startActivity(android.content.Intent.createChooser(intent, "Chia sẻ"))
         }
-        startActivity(android.content.Intent.createChooser(shareIntent, "Chia sẻ bài báo"))
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         tts?.stop()
+        exoPlayer?.release()
+        exoPlayer = null
+        fullscreenPlayer?.release()
+        fullscreenPlayer = null
+        fullscreenDialog?.dismiss()
+        fullscreenDialog = null
         _binding = null
     }
 

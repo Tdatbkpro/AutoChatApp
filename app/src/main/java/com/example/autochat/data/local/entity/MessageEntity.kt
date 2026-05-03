@@ -1,19 +1,12 @@
 package com.example.autochat.data.local.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "messages",
-    foreignKeys = [ForeignKey(
-        entity = SessionEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["sessionId"],
-        onDelete = ForeignKey.CASCADE
-    )],
-    indices = [Index("sessionId")]
+    indices = [Index("sessionId")]  // ✅ Bỏ foreign key
 )
 data class MessageEntity(
     @PrimaryKey val id: String,
@@ -23,5 +16,5 @@ data class MessageEntity(
     val timestamp: Long,
     val extraData: String? = null,
     val isSynced: Boolean = false,
-    val isOffline: Boolean = false // Đánh dấu tin nhắn từ local LLM
+    val isOffline: Boolean = false
 )

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/item_message_user.xml — thêm branch navigator -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -12,8 +14,7 @@
         android:layout_gravity="end"
         app:cardBackgroundColor="#1A4A8A"
         app:cardCornerRadius="18dp"
-        app:cardElevation="2dp"
-        xmlns:app="http://schemas.android.com/apk/res-auto">
+        app:cardElevation="2dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -24,6 +25,7 @@
 
             <TextView
                 android:id="@+id/tvContent"
+                android:textIsSelectable="true"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#FFFFFF"
@@ -40,4 +42,54 @@
                 android:layout_marginTop="4dp"/>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
+
+    <!-- ✅ Branch navigator — chỉ visible khi có > 1 nhánh -->
+    <LinearLayout
+        android:id="@+id/layoutBranchNav"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_gravity="end"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_branch_navigator"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/btnPrevBranch"
+            android:layout_width="32dp"
+            android:layout_height="28dp"
+            android:text="◀"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <TextView
+            android:id="@+id/tvBranchIndex"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1 / 1"
+            android:textColor="#58A6FF"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"/>
+
+        <TextView
+            android:id="@+id/btnNextBranch"
+            android:layout_width="32dp"
+            android:layout_height="28dp"
+            android:text="▶"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"/>
+
+    </LinearLayout>
 </LinearLayout>

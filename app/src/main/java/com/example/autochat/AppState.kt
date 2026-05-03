@@ -5,8 +5,9 @@ import com.example.autochat.ui.car.MyChatScreen
 import com.example.autochat.ui.car.VoiceSearchScreen
 
 object AppState {
-    var serverBaseUrl : String = "http://192.168.1.118:8001"
     var chatScreen: MyChatScreen? = null
+
+    var isConnectServer : Boolean = false
     var voiceScreen: VoiceSearchScreen? = null
     var currentSession: ChatSession? = null
     var currentSessionId: String? = null

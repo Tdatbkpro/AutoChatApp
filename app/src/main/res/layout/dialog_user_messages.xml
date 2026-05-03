@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="💬 Tin nhắn của bạn"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvMessageCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 tin nhắn"
+            android:textColor="#64B5F6"
+            android:textSize="12sp"
+            android:background="@drawable/bg_badge"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp" />
+
+    </LinearLayout>
+
+    <!-- Search bar với icon -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_search"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_search"
+            android:layout_marginEnd="8dp"
+            app:tint="#666688" />
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="Tìm tin nhắn..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#555566"
+            android:textSize="14sp"
+            android:imeOptions="actionSearch"
+            android:singleLine="true" />
+
+        <ImageView
+            android:id="@+id/ivClearSearch"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_close"
+            android:visibility="gone"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#555577" />
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewUserMessages"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#252540"
+        android:layout_marginVertical="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/btnScrollToBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="↓ Cuối chat"
+            android:textColor="#AAAACC"
+            android:textSize="13sp"
+            android:paddingHorizontal="14dp"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btnClose"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="✕ Đóng"
+            android:textColor="#64B5F6"
+            android:textSize="13sp"
+            android:paddingHorizontal="14dp"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

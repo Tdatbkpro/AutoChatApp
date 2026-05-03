@@ -6,14 +6,19 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.example.autochat.data.local.AppDatabase
+import com.example.autochat.data.local.dao.CustomModelDao
 import com.example.autochat.data.local.dao.ReadHistoryDao
 import com.example.autochat.remote.api.AuthApi
 import com.example.autochat.remote.api.ChatApi
+import com.example.autochat.remote.api.GeminiKeyApi
 import com.example.autochat.remote.api.RagApi
 import com.example.autochat.domain.repository.AuthRepository
 import com.example.autochat.domain.repository.AuthRepositoryImpl
 import com.example.autochat.domain.repository.ChatRepository
 import com.example.autochat.domain.repository.ChatRepositoryImpl
+import com.example.autochat.domain.repository.GeminiKeyRepository
+import com.example.autochat.domain.repository.GeminiKeyRepositoryImpl
+import com.example.autochat.remote.api.Judge0Api
 import com.example.autochat.websocket.WebSocketManager
 import dagger.Module
 import dagger.Provides
@@ -35,14 +40,10 @@ private val Context.dataStore: DataStore<Preferences>
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // ── DataStore ─────────────────────────────────────────────────────────────
-
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext ctx: Context): DataStore<Preferences> =
         ctx.dataStore
-
-    // ── Room Database ─────────────────────────────────────────────────────────
 
     @Provides
     @Singleton
@@ -57,7 +58,9 @@ object AppModule {
     @Singleton
     fun provideReadHistoryDao(db: AppDatabase): ReadHistoryDao = db.readHistoryDao()
 
-    // ── OkHttpClient (dùng chung) ─────────────────────────────────────────────
+    @Provides
+    @Singleton
+    fun provideCustomModelDao(db: AppDatabase): CustomModelDao = db.customModelDao()
 
     @Provides
     @Singleton
@@ -69,8 +72,6 @@ object AppModule {
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-
-    // ── Retrofit: server-chat port 8001 ───────────────────────────────────────
 
     @Provides
     @Singleton
@@ -86,24 +87,20 @@ object AppModule {
             .build()
 
         return Retrofit.Builder()
-            .baseUrl("http://192.168.1.118:8001/")
+            .baseUrl("http://192.168.1.15:8001/")
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
-    // ── Retrofit: server-rag port 8000 ────────────────────────────────────────
-
     @Provides
     @Singleton
     @Named("rag")
     fun provideRagRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
-        .baseUrl("http://192.168.1.118:8000/")
+        .baseUrl("http://192.168.1.15:8000/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-
-    // ── API interfaces ────────────────────────────────────────────────────────
 
     @Provides
     @Singleton
@@ -120,7 +117,10 @@ object AppModule {
     fun provideRagApi(@Named("rag") retrofit: Retrofit): RagApi =
         retrofit.create(RagApi::class.java)
 
-    // ── Repositories ──────────────────────────────────────────────────────────
+    @Provides
+    @Singleton
+    fun provideGeminiKeyApi(@Named("chat") retrofit: Retrofit): GeminiKeyApi =
+        retrofit.create(GeminiKeyApi::class.java)
 
     @Provides
     @Singleton
@@ -130,9 +130,31 @@ object AppModule {
     @Singleton
     fun provideChatRepository(impl: ChatRepositoryImpl): ChatRepository = impl
 
-    // ── WebSocket ─────────────────────────────────────────────────────────────
+    @Provides
+    @Singleton
+    fun provideGeminiKeyRepository(impl: GeminiKeyRepositoryImpl): GeminiKeyRepository = impl  // ✅ trong object
 
     @Provides
     @Singleton
     fun provideWebSocketManager(): WebSocketManager = WebSocketManager()
+
+    @Provides
+    @Singleton
+    @Named("judge0")
+    fun provideJudge0Retrofit(): Retrofit = Retrofit.Builder()
+        .baseUrl("https://ce.judge0.com/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .client(
+            OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build()
+        )
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideJudge0Api(@Named("judge0") retrofit: Retrofit): Judge0Api =
+        retrofit.create(Judge0Api::class.java)
 }

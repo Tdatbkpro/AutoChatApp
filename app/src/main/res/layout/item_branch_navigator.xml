@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="28dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_branch_navigator"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
+
+    <!-- ◀ prev -->
+    <TextView
+        android:id="@+id/btnPrevBranch"
+        android:layout_width="32dp"
+        android:layout_height="28dp"
+        android:text="◀"
+        android:textColor="#8B949E"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <!-- "1 / 3" -->
+    <TextView
+        android:id="@+id/tvBranchIndex"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1 / 1"
+        android:textColor="#58A6FF"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"/>
+
+    <!-- ▶ next -->
+    <TextView
+        android:id="@+id/btnNextBranch"
+        android:layout_width="32dp"
+        android:layout_height="28dp"
+        android:text="▶"
+        android:textColor="#8B949E"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"/>
+
+</LinearLayout>

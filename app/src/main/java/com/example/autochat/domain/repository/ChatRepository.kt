@@ -20,14 +20,41 @@ interface ChatRepository {
         object Connected : RealtimeEvent()
         object Disconnected : RealtimeEvent()
         data class Joined(val sessionId: String) : RealtimeEvent()
-        data class Error(val error: String) : RealtimeEvent()
-    }
 
+        data class Error(val error: String) : RealtimeEvent()
+        data class BranchCreated(
+            val sessionId:      String,
+            val branchId:       String,
+            val pivotMessageId: String,
+            val branchInfo:     BranchInfoData,
+        ) : RealtimeEvent()
+    }
+    data class EditMessageResult(
+        val newBranchId:   String,
+        val userMessageId: String,
+        val botMessageId:  String,
+        val userMessage:   Message,
+        val botMessage:    Message,
+        val branchInfo:    BranchInfoData,
+    )
+
+    data class BranchInfoData(
+        val branchId:  String,
+        val index:     Int,
+        val total:     Int,
+        val createdAt: Long,
+    )
     val realtimeEvents: Flow<RealtimeEvent>
     sealed class StreamChunk {
         data class Token(val text: String) : StreamChunk()
-        data class Done(val fullResponse: String) : StreamChunk()
-        data class Meta(val sessionId: String, val sessionTitle: String) : StreamChunk()
+        data class Done(
+            val fullResponse: String,
+            val botMessage: Message? = null,   // ← ở đây
+        ) : StreamChunk()
+        data class Meta(
+            val sessionId: String,
+            val sessionTitle: String,
+        ) : StreamChunk()
         data class Error(val message: String) : StreamChunk()
     }
 
@@ -35,10 +62,14 @@ interface ChatRepository {
     fun streamMessage(
         sessionId: String?,
         content: String,
-        endpoint: String = "ask"
+        endpoint: String = "ask",
+        branchId: String? = null,
     ): Flow<StreamChunk>
     fun getSessionsFlow(): Flow<List<ChatSession>>
-    fun getMessagesFlow(sessionId: String): Flow<List<Message>>
+    fun getMessagesFlow(
+        sessionId: String,
+        branchId: String? = null,   // ✅ Thêm
+    ): Flow<List<Message>>
 
     suspend fun sendMessage(
         sessionId: String?,
@@ -59,12 +90,32 @@ interface ChatRepository {
     suspend fun getMessages(sessionId: String): List<Message>
     // Thêm vào interface ChatRepository
     fun getOfflineMessagesFlow(sessionId: String): Flow<List<MessageEntity>>
+    suspend fun syncOfflineMessages()
     suspend fun sendOfflineMessage(
         sessionId: String?,
         content: String,
         onToken: (String) -> Unit
     ): Result<SendMessageResult>
     suspend fun togglePinSession(sessionId: String)
+    suspend fun saveBotMessage(sessionId: String, content: String, messageId: String)
+    suspend fun editMessage(
+        sessionId:  String,
+        messageId:  String,
+        newContent: String,
+        endpoint:   String,
+    ): EditMessageResult
+    suspend fun syncBranchToRag(sessionId: String, branchId: String)
+    /** Lấy messages đầy đủ của 1 nhánh (context trước + messages nhánh) */
+    suspend fun getBranchMessages(
+        sessionId: String,
+        branchId:  String,
+    ): List<Message>
+    suspend fun getLatestBranchId(sessionId: String): String
+    /** Lấy danh sách nhánh tại 1 pivot message (cho navigator) */
+    suspend fun getBranchesAtMessage(
+        sessionId:  String,
+        messageId:  String,
+    ): List<BranchInfoData>
     data class SendMessageResult(
         val userMessage: Message,
         val sessionId: String,

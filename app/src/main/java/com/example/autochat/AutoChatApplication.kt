@@ -7,13 +7,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.core.net.toUri
+import com.example.autochat.domain.repository.AuthRepository
+import com.example.autochat.domain.repository.HasCodeExecutor
+
 
 @HiltAndroidApp
-class AutoChatApplication : Application() {
+class AutoChatApplication : Application(), HasCodeExecutor
+{
 
     @Inject
-    lateinit var authRepository: com.example.autochat.domain.repository.AuthRepository
+    lateinit var authRepository: AuthRepository
+
+    // ✅ Inject vào property riêng, override bằng getter
+    @Inject
+    lateinit var _codeExecutor: CodeExecutor
+
+    override val codeExecutor: CodeExecutor
+        get() = _codeExecutor
 
     override fun onCreate() {
         super.onCreate()

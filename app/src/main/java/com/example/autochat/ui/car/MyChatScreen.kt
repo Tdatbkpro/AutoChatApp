@@ -241,8 +241,10 @@ class MyChatScreen(carContext: CarContext) : Screen(carContext), TextToSpeech.On
         for (item in items) {
             val articleId = item.id
             if (articleId == null || articleId !in readIds) {
-                result.add(item); continue
+                result.add(item)
+                continue
             }
+
             val excludeIds = (readIds + usedIds).toList()
             val next = try {
                 chatRepository.getNextArticle(
@@ -252,8 +254,8 @@ class MyChatScreen(carContext: CarContext) : Screen(carContext), TextToSpeech.On
                 )
             } catch (e: Exception) { null }
 
-            if (next != null) {
-                usedIds.add(next.id)
+            if (next != null && next.id != null) {  // ✅ Kiểm tra next.id != null
+                usedIds.add(next.id)                 // ✅ Bây giờ an toàn vì đã check null
                 result.add(QuickReplyItem(
                     label    = next.title,
                     id       = next.id,
@@ -316,18 +318,18 @@ class MyChatScreen(carContext: CarContext) : Screen(carContext), TextToSpeech.On
                     val article = chatRepository.getArticleById(item.id)
                     isWaitingResponse = false; isSending = false
 
-                    if (article != null) {
+                    if (article != null && article.id != null) {  // ✅ Check article.id != null
                         val content = buildString {
                             if (!article.description.isNullOrBlank()) append(article.description).append("\n\n")
                             if (!article.content.isNullOrBlank()) append(article.content)
                         }.ifBlank { item.label }
 
-                        articleSlotMap[article.id] = slotIndex
+                        articleSlotMap[article.id] = slotIndex  // ✅ Bây giờ an toàn
                         screenManager.push(
                             NewsDetailScreen(
                                 carContext      = carContext,
                                 chatScreen      = this@MyChatScreen,
-                                articleId       = article.id,
+                                articleId       = article.id,  // ✅ Đã check null ở trên
                                 fallbackTitle   = article.title.ifBlank { item.label },
                                 fallbackContent = content,
                                 allowAutoAdvance  = true,

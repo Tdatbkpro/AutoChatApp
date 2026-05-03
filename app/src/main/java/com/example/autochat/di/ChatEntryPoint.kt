@@ -13,4 +13,5 @@ interface ChatEntryPoint {
     fun chatRepository(): ChatRepository
     fun authRepository(): AuthRepository
     fun readHistoryRepository(): ReadHistoryRepository
+
 }

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/popup_message_actions.xml -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/bg_popup_actions"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp"
+    android:elevation="12dp">
+
+    <!-- Retry -->
+    <LinearLayout
+        android:id="@+id/actionRetry"
+        android:layout_width="64dp"
+        android:layout_height="56dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_action_item">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↺"
+            android:textSize="20sp"
+            android:textColor="#58A6FF"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Retry"
+            android:textSize="10sp"
+            android:textColor="#8B949E"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginHorizontal="2dp"
+        android:background="#30363D"/>
+
+    <!-- Copy -->
+    <LinearLayout
+        android:id="@+id/actionCopy"
+        android:layout_width="64dp"
+        android:layout_height="56dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_action_item">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⎘"
+            android:textSize="20sp"
+            android:textColor="#3FB950"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Copy"
+            android:textSize="10sp"
+            android:textColor="#8B949E"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginHorizontal="2dp"
+        android:background="#30363D"/>
+
+    <!-- Edit -->
+    <LinearLayout
+        android:id="@+id/actionEdit"
+        android:layout_width="64dp"
+        android:layout_height="56dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_action_item">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✎"
+            android:textSize="20sp"
+            android:textColor="#BC8CFF"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit"
+            android:textSize="10sp"
+            android:textColor="#8B949E"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+</LinearLayout>

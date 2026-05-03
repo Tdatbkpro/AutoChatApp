@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="10dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bg_math_block"
+    android:clipToOutline="true"
+    android:elevation="2dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        android:background="#1A1F2E"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Icon + label -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="∑"
+                android:textColor="#7C9EFF"
+                android:textSize="15sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="formula"
+                android:textColor="#6B7DB3"
+                android:textSize="12sp"
+                android:letterSpacing="0.05"/>
+        </LinearLayout>
+
+        <!-- Copy LaTeX button -->
+        <LinearLayout
+            android:id="@+id/btnCopyLatex"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:background="@drawable/bg_gh_btn"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_copy"
+                app:tint="#7C9EFF"/>
+
+            <TextView
+                android:id="@+id/tvCopyLatexLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="Copy LaTeX"
+                android:textColor="#7C9EFF"
+                android:textSize="11sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Accent line -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1.5dp"
+        android:background="@drawable/gradient_math_divider"/>
+
+    <!-- Formula area -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#0E1120"
+        android:scrollbars="none"
+        android:fadingEdgeLength="24dp"
+        android:requiresFadingEdge="horizontal"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/tvMathFormula"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:textIsSelectable="false"/>
+    </HorizontalScrollView>
+
+</LinearLayout>

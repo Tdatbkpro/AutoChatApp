@@ -172,8 +172,8 @@ class QuickReplyManager {
                 )
             } catch (e: Exception) { null }
 
-            if (next != null) {
-                usedIds.add(next.id)
+            if (next != null && next.id != null) {
+                usedIds.add(next.id!!)
                 result.add(QuickReplyItem(
                     label    = next.title,
                     id       = next.id,

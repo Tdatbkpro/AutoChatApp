@@ -19,7 +19,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Nút menu bên trái -->
         <ImageButton
             android:id="@+id/btnMenu"
             android:layout_width="40dp"
@@ -29,7 +28,6 @@
             android:padding="8dp"
             app:tint="#AAAACC"/>
 
-        <!-- Model status button ở giữa -->
         <LinearLayout
             android:id="@+id/btnModelStatus"
             android:layout_width="0dp"
@@ -69,7 +67,6 @@
                 android:layout_marginStart="4dp"/>
         </LinearLayout>
 
-        <!-- Nút chat mới + session title bên phải -->
         <TextView
             android:id="@+id/tvSessionTitle"
             android:layout_width="0dp"
@@ -349,7 +346,9 @@
         android:layout_marginBottom="12dp"
         tools:visibility="visible" />
 
-    <!-- Input Layout -->
+    <!-- ============================================================
+         Input Layout — mic | endpoint pill | text field | toggle | send
+         ============================================================ -->
     <LinearLayout
         android:id="@+id/inputLayout"
         android:layout_width="0dp"
@@ -371,8 +370,50 @@
             android:layout_height="44dp"
             android:src="@drawable/ic_mic"
             android:background="@drawable/bg_circle_dark"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
             android:elevation="2dp" />
+
+        <!-- ✅ Endpoint Selector Pill Button -->
+        <FrameLayout
+            android:id="@+id/btnEndpoint"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_endpoint_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:minWidth="0dp"
+            android:gravity="center"
+            android:elevation="2dp">
+
+            <!-- "outgoing" label — slides out upward on switch -->
+            <TextView
+                android:id="@+id/tvEndpointOut"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:paddingHorizontal="8dp"
+                android:textColor="#AAAACC"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:visibility="invisible"
+                tools:text="NEWS"/>
+
+            <!-- "incoming" label — current, slides in from below -->
+            <TextView
+                android:id="@+id/tvEndpointLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:paddingHorizontal="8dp"
+                android:text="NEWS"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"/>
+
+        </FrameLayout>
 
         <!-- Text Input -->
         <com.google.android.material.textfield.TextInputLayout
@@ -407,7 +448,7 @@
                 android:background="@android:color/transparent" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- ✅ THÊM: Toggle Online/Offline (chỉ hiện khi có model + có mạng) -->
+        <!-- Toggle Online/Offline -->
         <ImageButton
             android:id="@+id/btnToggleMode"
             android:layout_width="40dp"
@@ -431,5 +472,17 @@
             android:alpha="0.4"
             android:enabled="false" />
     </LinearLayout>
-
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnShowUserMessages"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:contentDescription="Xem tin nhắn đã gửi"
+        android:src="@drawable/ic_message_history"
+        android:visibility="gone"
+        app:backgroundTint="#4A90E2"
+        app:fabSize="normal"
+        app:rippleColor="#80FFFFFF"
+        app:tint="#FFFFFF"
+        tools:ignore="MissingConstraints" />
 </androidx.constraintlayout.widget.ConstraintLayout>

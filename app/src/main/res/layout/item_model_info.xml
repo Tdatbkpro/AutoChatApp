@@ -77,6 +77,7 @@
                     android:ellipsize="end" />
 
                 <!-- Tags row -->
+                <!-- Trong phần Tags row, thêm tag Custom -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -105,11 +106,26 @@
                         android:paddingVertical="2dp"
                         android:layout_marginStart="6dp"
                         android:visibility="gone" />
+
+                    <!-- ✅ Tag Custom -->
+                    <TextView
+                        android:id="@+id/tvCustomBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom"
+                        android:textColor="#FF9800"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_tag_custom"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:layout_marginStart="6dp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Progress Section (visible during download) -->
+        <!-- Progress Section (visible during download/pause) -->
         <LinearLayout
             android:id="@+id/layoutProgress"
             android:layout_width="match_parent"
@@ -175,6 +191,8 @@
                         android:layout_marginTop="2dp" />
                 </LinearLayout>
             </LinearLayout>
+            <!-- Trong phần Tags row, thêm tag Custom -->
+
 
             <!-- Progress bar -->
             <ProgressBar
@@ -187,21 +205,46 @@
                 android:progressTint="#6C63FF"
                 android:progressBackgroundTint="#2A2A3E" />
 
-            <!-- Pause/Resume button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPauseResume"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Tạm dừng"
-                android:textSize="12sp"
-                android:textColor="#FFFFFF"
-                app:backgroundTint="#FF9800"
-                app:cornerRadius="18dp"
-                app:icon="@drawable/ic_pause"
-                app:iconSize="16dp"
-                android:paddingHorizontal="16dp"
+            <!-- Pause/Resume + Cancel buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="10dp"
-                android:layout_gravity="center_horizontal" />
+                android:gravity="center">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPauseResume"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:text="Tạm dừng"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    app:backgroundTint="#FF9800"
+                    app:cornerRadius="18dp"
+                    app:icon="@drawable/ic_pause"
+                    app:iconSize="16dp"
+                    android:paddingHorizontal="16dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancel"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Hủy"
+                    android:textSize="12sp"
+                    android:textColor="#FF6B6B"
+                    app:backgroundTint="#2A2A3E"
+                    app:cornerRadius="18dp"
+                    app:strokeColor="#FF6B6B"
+                    app:strokeWidth="1dp"
+                    app:icon="@drawable/ic_delete"
+                    app:iconSize="16dp"
+                    app:iconTint="#FF6B6B"
+                    android:paddingHorizontal="16dp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Downloaded Section -->
@@ -227,11 +270,26 @@
                 app:icon="@drawable/ic_play"
                 app:iconSize="18dp" />
 
+            <!-- ✅ Nút sửa (chỉ hiện cho custom) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEdit"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="6dp"
+                app:icon="@drawable/ic_edit"
+                app:iconSize="18dp"
+                app:iconTint="#FF9800"
+                app:backgroundTint="#2A2A3E"
+                app:cornerRadius="22dp"
+                app:strokeColor="#FF9800"
+                app:strokeWidth="1dp"
+                android:visibility="gone" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDelete"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 app:icon="@drawable/ic_delete"
                 app:iconSize="20dp"
                 app:iconTint="#FF6B6B"
@@ -241,7 +299,7 @@
                 app:strokeWidth="1dp" />
         </LinearLayout>
 
-        <!-- Download Button (initial state) -->
+        <!-- Download Button (built-in) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDownload"
             android:layout_width="match_parent"
@@ -256,7 +314,55 @@
             app:iconSize="18dp"
             android:visibility="gone" />
 
-        <!-- Active badge -->
+        <!-- ✅ Custom model actions (chưa download) -->
+        <LinearLayout
+            android:id="@+id/layoutCustomActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadCustom"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Tải về"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#6C63FF"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_download"
+                app:iconSize="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEditCustom"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="6dp"
+                app:icon="@drawable/ic_edit"
+                app:iconSize="18dp"
+                app:iconTint="#FF9800"
+                app:backgroundTint="#2A2A3E"
+                app:cornerRadius="22dp"
+                app:strokeColor="#FF9800"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteCustom"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="6dp"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="20dp"
+                app:iconTint="#FF6B6B"
+                app:backgroundTint="#2A2A3E"
+                app:cornerRadius="22dp"
+                app:strokeColor="#FF6B6B"
+                app:strokeWidth="1dp" />
+        </LinearLayout>
         <LinearLayout
             android:id="@+id/layoutActive"
             android:layout_width="wrap_content"

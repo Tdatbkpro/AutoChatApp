@@ -12,4 +12,39 @@
         <item name="android:textColorHint">#6B6B8A</item>
         <item name="boxBackgroundColor">#1A1A2E</item>
     </style>
+
+    <style name="DialogTheme" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.7</item>
+    </style>
+
+    <style name="RoundedTextInput" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="DialogZoomAnimation" parent="android:Animation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
+
+    <!-- ✅ Chỉ giữ 1 định nghĩa duy nhất -->
+    <style name="BottomSheetGitHubTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">#0D1117</item>
+        <item name="bottomSheetStyle">@style/GitHubBottomSheet</item>
+    </style>
+
+    <style name="GitHubBottomSheet" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/bg_bottom_sheet</item>
+    </style>
+
+    <style name="BottomSheetAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
 </resources>

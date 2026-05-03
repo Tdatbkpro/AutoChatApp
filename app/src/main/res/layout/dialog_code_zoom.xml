@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dialog_zoom">
+
+    <!-- Content container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:clipToPadding="false"
+        tools:ignore="UselessParent">
+
+        <!-- Header với blur effect -->
+        <LinearLayout
+            android:id="@+id/headerZoom"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="12dp"
+            android:background="@drawable/bg_zoom_header"
+            android:elevation="8dp">
+
+            <!-- Icon code -->
+            <LinearLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:background="@drawable/bg_zoom_icon"
+                android:layout_marginEnd="14dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_code"
+                    android:alpha="0.9"/>
+            </LinearLayout>
+
+            <!-- Language & title -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvZoomLanguage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:text="Python"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pinch to zoom • Double tap to reset"
+                    android:textColor="#94A3B8"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <!-- Action buttons -->
+            <!-- Action buttons — thay thế phần LinearLayout chứa btnZoomCopy và btnZoomClose -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- ✅ Run button — chỉ hiện khi ngôn ngữ supported -->
+                <LinearLayout
+                    android:id="@+id/btnZoomRun"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_zoom_btn"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="▶"
+                        android:textColor="#3FB950"
+                        android:textSize="16sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+
+                <!-- Copy button -->
+                <LinearLayout
+                    android:id="@+id/btnZoomCopy"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:gravity="center"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_zoom_btn"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_copy"
+                        android:alpha="0.9"/>
+                </LinearLayout>
+
+                <!-- Close button -->
+                <LinearLayout
+                    android:id="@+id/btnZoomClose"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:gravity="center"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_zoom_btn"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_close"
+                        android:alpha="0.9"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Line indicator -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="@drawable/bg_gradient_line"/>
+
+        <!-- Code area with zoom -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scrollbars="vertical"
+            android:fadingEdgeLength="32dp"
+            android:requiresFadingEdge="vertical">
+
+            <HorizontalScrollView
+                android:id="@+id/horizontalScrollZoom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:fadingEdgeLength="32dp"
+                android:requiresFadingEdge="horizontal">
+
+                <com.example.autochat.ui.phone.ZoomableTextView
+                    android:id="@+id/tvZoomCode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="28dp"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace"
+                    android:textIsSelectable="true"
+                    android:lineSpacingMultiplier="1.6"
+                    android:textColor="#E2E8F0"
+                    android:background="#0F172A" />
+            </HorizontalScrollView>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Bottom bar hint -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:background="#1E293B"
+            android:alpha="0.95">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Drag to scroll • Pinch to zoom • Tap to select"
+                android:textColor="#64748B"
+                android:textSize="11sp"
+                android:fontFamily="monospace"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

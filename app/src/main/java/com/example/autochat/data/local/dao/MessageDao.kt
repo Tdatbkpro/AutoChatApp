@@ -12,6 +12,10 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE sessionId = :sessionId ORDER BY timestamp ASC")
     suspend fun getMessagesList(sessionId: String): List<MessageEntity>
 
+    // ✅ Thêm để ChatRepositoryImpl.cacheMessagesToRoom() có thể check trùng trước khi insert
+    @Query("SELECT * FROM messages WHERE id = :messageId LIMIT 1")
+    suspend fun getMessageById(messageId: String): MessageEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: MessageEntity)
 

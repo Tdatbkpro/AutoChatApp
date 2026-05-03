@@ -4,10 +4,12 @@ data class Message(
     val id: String,
     val sessionId: String,
     val content: String,
-    val sender: String,      // "user" hoặc "bot"
+    val sender: String,
     val timestamp: Long,
     val isSynced: Boolean = false,
-    // extra_data từ server: { type: "news_list", content: "...", news_items: [...] }
-    // Được lưu dạng Map<String, Any?> sau khi deserialize từ JSON
     val extraData: Map<String, Any?>? = null,
+
+    // ✅ Branch fields — nullable vì data cũ không có
+    val branchId: String? = null,
+    val parentMessageId: String? = null,
 )

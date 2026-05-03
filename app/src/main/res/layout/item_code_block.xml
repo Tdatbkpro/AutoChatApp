@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_code_block"
+    android:clipToOutline="true">
+
+    <!-- Header — giữ nguyên, KHÔNG thêm Run vào đây -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:orientation="horizontal"
+        android:background="#161B22"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:gravity="center_vertical">
+
+        <View android:layout_width="10dp" android:layout_height="10dp"
+            android:background="@drawable/bg_dot_red"/>
+        <View android:layout_width="10dp" android:layout_height="10dp"
+            android:layout_marginStart="6dp" android:background="@drawable/bg_dot_yellow"/>
+        <View android:layout_width="10dp" android:layout_height="10dp"
+            android:layout_marginStart="6dp" android:background="@drawable/bg_dot_green"/>
+
+        <TextView
+            android:id="@+id/tvLanguage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:layout_marginStart="6dp"
+            android:fontFamily="monospace"
+            android:text="plaintext"/>
+
+        <LinearLayout
+            android:id="@+id/btnZoomCode"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:background="@drawable/bg_code_action_btn"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_zoom"
+                android:layout_marginEnd="4dp"
+                app:tint="#8B949E"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:text="Zoom"
+                android:textColor="#8B949E"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnCopyCode"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:background="@drawable/bg_gh_btn"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/ivCopyIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_copy"
+                app:tint="#8B949E"/>
+            <TextView
+                android:id="@+id/tvCopyLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="Copy"
+                android:textColor="#8B949E"
+                android:textSize="12sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#30363D"/>
+
+    <!-- Code content -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#0D1117"
+        android:scrollbars="none"
+        android:fadingEdgeLength="20dp"
+        android:requiresFadingEdge="horizontal">
+        <TextView
+            android:id="@+id/tvCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true"
+            android:lineSpacingMultiplier="1.5"/>
+    </HorizontalScrollView>
+
+    <!-- ✅ Footer bar — Run button ở đây -->
+    <!-- Thêm vào cuối, sau HorizontalScrollView code content -->
+    <LinearLayout
+        android:id="@+id/footerRunBar"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:orientation="horizontal"
+        android:background="#161B22"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <LinearLayout
+            android:id="@+id/btnRunCode"
+            android:layout_width="wrap_content"
+            android:layout_height="26dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:background="@drawable/bg_run_btn"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▶  Run"
+                android:textColor="#3FB950"
+                android:textSize="12sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

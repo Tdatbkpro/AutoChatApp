@@ -13,8 +13,10 @@ class ModelAdapter(
     private val onDownload: (ModelManager.ModelInfo) -> Unit,
     private val onPause:    (ModelManager.ModelInfo) -> Unit,
     private val onResume:   (ModelManager.ModelInfo) -> Unit,
+    private val onCancel:   (ModelManager.ModelInfo) -> Unit,   // ← Hủy hoàn toàn
     private val onSelect:   (ModelManager.ModelInfo) -> Unit,
-    private val onDelete:   (ModelManager.ModelInfo) -> Unit
+    private val onDelete:   (ModelManager.ModelInfo) -> Unit,
+    private val onEdit: (ModelManager.ModelInfo) -> Unit
 ) : ListAdapter<ModelAdapter.ModelState, ModelAdapter.ViewHolder>(DiffCallback()) {
 
     data class ModelState(
@@ -34,60 +36,62 @@ class ModelAdapter(
         ItemModelInfoBinding.inflate(LayoutInflater.from(parent.context), parent, false)
     )
 
-    // ✅ Dùng payload để chỉ update progress, không rebuild cả item
     override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
         } else {
-            // Chỉ update progress
-            val state = getItem(position)
-            updateProgressOnly(holder, state)
+            updateProgressOnly(holder, getItem(position))
         }
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val state = getItem(position)
-        bindFull(holder, state)
+        bindFull(holder, getItem(position))
     }
 
-    // ✅ Update toàn bộ item (khi trạng thái thay đổi)
     private fun bindFull(holder: ViewHolder, state: ModelState) {
         val model = state.info
         holder.binding.apply {
             tvModelName.text = model.name
             tvModelDesc.text = model.description
             tvModelSize.text = formatSize(model.sizeMB)
-
             tvModelFormat.visibility = View.VISIBLE
-            tvModelFormat.text = if (model.name.contains("Q4", true)) "Q4" else "GGUF"
+            tvModelFormat.text = "GGUF"
 
-            // Reset visibility
+            tvCustomBadge.visibility = if (model.id.startsWith("custom_")) View.VISIBLE else View.GONE
+
             btnDownload.visibility = View.GONE
             layoutDownloaded.visibility = View.GONE
             layoutProgress.visibility = View.GONE
             layoutActive.visibility = View.GONE
             ivDownloadedBadge.visibility = View.GONE
 
+            // ✅ Ẩn tất cả nút custom row trước
+            btnEdit.visibility = View.GONE
+            layoutCustomActions.visibility = View.GONE
+
             when {
                 state.isDownloading -> {
                     layoutProgress.visibility = View.VISIBLE
                     btnPauseResume.text = "Tạm dừng"
-                    btnPauseResume.icon = holder.itemView.context.getDrawable(com.example.autochat.R.drawable.ic_pause)
                     btnPauseResume.setOnClickListener { onPause(model) }
-                    updateProgressOnly(holder, state)  // ✅ Gọi update progress
+                    btnCancel.visibility = View.VISIBLE
+                    btnCancel.setOnClickListener { onCancel(model) }
+                    updateProgressOnly(holder, state)
                 }
-
                 state.isPaused -> {
                     layoutProgress.visibility = View.VISIBLE
                     btnPauseResume.text = "Tiếp tục"
-                    btnPauseResume.icon = holder.itemView.context.getDrawable(com.example.autochat.R.drawable.ic_play)
                     btnPauseResume.setOnClickListener { onResume(model) }
-                    updateProgressOnly(holder, state)  // ✅ Gọi update progress
+                    btnCancel.visibility = View.VISIBLE
+                    btnCancel.setOnClickListener { onCancel(model) }
+                    updateProgressOnly(holder, state)
                 }
-
-                model.isDownloaded -> {
+                state.info.isDownloaded -> {
                     layoutDownloaded.visibility = View.VISIBLE
                     ivDownloadedBadge.visibility = View.VISIBLE
+
+                    btnEdit.visibility = if (model.id.startsWith("custom_")) View.VISIBLE else View.GONE
+                    btnEdit.setOnClickListener { onEdit(model) }
 
                     if (state.isActive) {
                         layoutActive.visibility = View.VISIBLE
@@ -99,14 +103,26 @@ class ModelAdapter(
                         btnSelect.alpha = 1f
                         btnSelect.isEnabled = true
                     }
-
                     btnSelect.setOnClickListener { onSelect(model) }
                     btnDelete.setOnClickListener { onDelete(model) }
                 }
-
                 else -> {
-                    btnDownload.visibility = View.VISIBLE
-                    btnDownload.setOnClickListener { onDownload(model) }
+                    // ✅ Chưa download - hiện nút Tải về + Sửa/Xóa nếu là custom
+                    if (model.id.startsWith("custom_")) {
+                        // Custom: Tải về + Sửa + Xóa
+                        layoutCustomActions.visibility = View.VISIBLE
+                        btnDownloadCustom.visibility = View.VISIBLE
+                        btnDownloadCustom.text = "Tải về"
+                        btnDownloadCustom.setOnClickListener { onDownload(model) }
+                        btnEditCustom.visibility = View.VISIBLE
+                        btnEditCustom.setOnClickListener { onEdit(model) }
+                        btnDeleteCustom.visibility = View.VISIBLE
+                        btnDeleteCustom.setOnClickListener { onDelete(model) }
+                    } else {
+                        // Built-in: chỉ Tải về
+                        btnDownload.visibility = View.VISIBLE
+                        btnDownload.setOnClickListener { onDownload(model) }
+                    }
                 }
             }
         }
@@ -116,98 +132,83 @@ class ModelAdapter(
         holder.binding.apply {
             val pct = (state.progress * 100).toInt()
             progressDownload.progress = pct
-            tvProgressPercent.text = "$pct%"
+            tvProgressPercent.text    = "$pct%"
 
-            // ✅ Dùng downloadedBytes thực tế
             val downloadedStr = formatBytes(state.downloadedBytes)
-            val totalStr = formatBytes(state.totalBytes)
+            val totalStr      = formatBytes(state.totalBytes)
             tvDownloadedSize.text = "$downloadedStr / $totalStr"
 
-            // ✅ Luôn hiển thị speed
-            tvSpeed.text = state.speed.ifEmpty { "0 B/s" }
+            if (state.isPaused) {
+                tvSpeed.text = "Đã tạm dừng"
+                tvEta.text   = "Nhấn Tiếp tục để tải lại"
+                tvEta.visibility = View.VISIBLE
+                return
+            }
 
-            // ✅ Tính ETA
+            tvSpeed.text = state.speed
+
             val speedBps = parseSpeedToBps(state.speed)
-            if (speedBps > 0 && state.downloadedBytes > 0 && state.totalBytes > state.downloadedBytes) {
-                val remainingBytes = state.totalBytes - state.downloadedBytes
-                val etaSeconds = (remainingBytes / speedBps).toLong()
-                tvEta.text = "Còn ${formatDuration(etaSeconds)}"
+            if (speedBps > 0 && state.totalBytes > state.downloadedBytes) {
+                val remaining  = state.totalBytes - state.downloadedBytes
+                val etaSeconds = (remaining / speedBps).toLong()
+                tvEta.text       = "Còn ${formatDuration(etaSeconds)}"
                 tvEta.visibility = View.VISIBLE
             } else if (state.downloadedBytes > 0) {
-                tvEta.text = "Đang tính..."
+                tvEta.text       = "Đang tính..."
                 tvEta.visibility = View.VISIBLE
             } else {
-                tvEta.text = "Bắt đầu..."
+                tvEta.text       = "Bắt đầu..."
                 tvEta.visibility = View.VISIBLE
             }
-            android.util.Log.d("ModelAdapter",
-                "id=${state.info.id} progress=${state.progress} " +
-                        "downloaded=${state.downloadedBytes} total=${state.totalBytes} " +
-                        "speed=${state.speed}")
         }
     }
 
     private fun parseSpeedToBps(speed: String): Float {
         return try {
-            // ✅ Thay dấu phẩy bằng dấu chấm, xóa "MB/s", "KB/s", "B/s"
-            val cleanSpeed = speed
-                .replace(",", ".")       // 19,2 → 19.2
-                .replace("MB/s", "")     // bỏ MB/s
-                .replace("KB/s", "")     // bỏ KB/s
-                .replace("B/s", "")      // bỏ B/s
-                .trim()
-
-            val value = cleanSpeed.toFloat()
+            val clean = speed.replace(",", ".").replace("MB/s", "").replace("KB/s", "").replace("B/s", "").trim()
+            val value = clean.toFloat()
             when {
                 speed.contains("MB/s") -> value * 1_000_000
                 speed.contains("KB/s") -> value * 1_000
                 else -> value
             }
-        } catch (e: Exception) {
-            0f
-        }
+        } catch (e: Exception) { 0f }
     }
 
     private fun formatDuration(seconds: Long): String {
         if (seconds < 60) return "${seconds}s"
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
-        return if (minutes < 60) {
-            "${minutes}:${remainingSeconds.toString().padStart(2, '0')} phút"
-        } else {
-            val hours = minutes / 60
-            val remainingMinutes = minutes % 60
-            "${hours}h${remainingMinutes}p"
-        }
+        return if (minutes < 60) "${minutes}:${remainingSeconds.toString().padStart(2, '0')} phút"
+        else "${minutes / 60}h${minutes % 60}p"
     }
 
-    private fun formatBytes(bytes: Long): String {
-        return when {
-            bytes >= 1_000_000_000 -> String.format("%.1f GB", bytes / 1_000_000_000f)
-            bytes >= 1_000_000 -> String.format("%.1f MB", bytes / 1_000_000f)
-            bytes >= 1_000 -> String.format("%.1f KB", bytes / 1_000f)
-            else -> "$bytes B"
-        }
+    private fun formatBytes(bytes: Long): String = when {
+        bytes >= 1_000_000_000 -> String.format("%.1f GB", bytes / 1_000_000_000f)
+        bytes >= 1_000_000     -> String.format("%.1f MB", bytes / 1_000_000f)
+        bytes >= 1_000         -> String.format("%.1f KB", bytes / 1_000f)
+        else -> "$bytes B"
     }
 
-    private fun formatSize(mb: Long) = when {
-        mb >= 1000 -> String.format("%.1f GB", mb / 1000f)
-        else -> "$mb MB"
-    }
+    private fun formatSize(mb: Long) = if (mb >= 1000) String.format("%.1f GB", mb / 1000f) else "$mb MB"
 
-    // ✅ DiffCallback với payload để không rebuild khi chỉ progress thay đổi
     class DiffCallback : DiffUtil.ItemCallback<ModelState>() {
         override fun areItemsTheSame(a: ModelState, b: ModelState) = a.info.id == b.info.id
 
-        // ✅ LUÔN TRẢ VỀ FALSE KHI ĐANG DOWNLOAD ĐỂ FORCE UPDATE
         override fun areContentsTheSame(a: ModelState, b: ModelState): Boolean {
-            // Nếu đang download hoặc paused, luôn return false để update UI
-            if (a.isDownloading || b.isDownloading || a.isPaused || b.isPaused) {
-                return false  // ← LUÔN UPDATE KHI ĐANG TẢI
-            }
-            return a == b
+            if (a.isDownloading != b.isDownloading) return false
+            if (a.isPaused      != b.isPaused)      return false
+            if (a.isActive      != b.isActive)      return false
+            if (a.info.isDownloaded != b.info.isDownloaded) return false
+            return a.progress == b.progress && a.speed == b.speed && a.downloadedBytes == b.downloadedBytes
         }
 
-        override fun getChangePayload(a: ModelState, b: ModelState): Any? = null
+        override fun getChangePayload(a: ModelState, b: ModelState): Any? {
+            return if (a.isDownloading == b.isDownloading &&
+                a.isPaused  == b.isPaused &&
+                a.isActive  == b.isActive &&
+                a.info.isDownloaded == b.info.isDownloaded && a != b
+            ) "progress_update" else null
+        }
     }
 }

@@ -37,6 +37,21 @@ class WebSocketManager @Inject constructor() {
         fun onPong()
         fun onJoined(sessionId: String)
         fun onError(error: String)
+        fun onSessionCreated(
+            sessionId: String,
+            title: String,
+            endpoint: String,
+            createdAt: Long,
+            updatedAt: Long
+        )
+        fun onBranchCreated(
+            sessionId:      String,
+            branchId:       String,
+            pivotMessageId: String,
+            branchIndex:    Int,
+            branchTotal:    Int,
+        ) {}
+        fun onSyncCompleted(sessionId: String) {}
     }
 
     fun addListener(listener: WebSocketListener) {
@@ -71,7 +86,7 @@ class WebSocketManager @Inject constructor() {
 
         currentUserId = userId
         currentDeviceId = UUID.randomUUID().toString().substring(0, 8)
-        val url = "ws://192.168.1.118:8001/ws/$userId/$currentDeviceId"
+        val url = "ws://192.168.1.15:8001/ws/$userId/$currentDeviceId"
 
         Log.d("WebSocketManager", "🔌 Connecting to $url")
 
@@ -130,14 +145,8 @@ class WebSocketManager @Inject constructor() {
 
                             // Parse extra_data nếu có
                             val extraData: Map<String, Any?>? = if (msgObj.has("extra_data") && !msgObj.isNull("extra_data")) {
-                                try {
-                                    val extraJson = msgObj.getJSONObject("extra_data")
-                                    val map = mutableMapOf<String, Any?>()
-                                    extraJson.keys().forEach { key ->
-                                        map[key] = extraJson.get(key)
-                                    }
-                                    map
-                                } catch (e: Exception) { null }
+                                try { parseJsonObject(msgObj.getJSONObject("extra_data")) }
+                                catch (e: Exception) { null }
                             } else null
 
                             val message = Message(
@@ -188,7 +197,18 @@ class WebSocketManager @Inject constructor() {
                             Log.d("WebSocketManager", "🗑️ Messages deleted: ${messageIds.size}")
                             listeners.forEach { it.onMessagesDeleted(sessionId, messageIds) }
                         }
-
+                        "session_created" -> {
+                            val sessionObj = json.getJSONObject("session")
+                            listeners.forEach {
+                                it.onSessionCreated(
+                                    sessionId  = sessionObj.getString("id"),
+                                    title      = sessionObj.getString("title"),
+                                    endpoint   = sessionObj.optString("endpoint", "ask"),
+                                    createdAt  = parseTimestamp(sessionObj.getString("created_at")),
+                                    updatedAt  = parseTimestamp(sessionObj.getString("updated_at"))
+                                )
+                            }
+                        }
                         "error" -> {
                             val error = json.getString("error")
                             Log.e("WebSocketManager", "❌ Server error: $error")
@@ -202,6 +222,34 @@ class WebSocketManager @Inject constructor() {
                             Log.d("WebSocketManager", "📨 Server ping → pong")
                             listeners.forEach { it.onPong() }
                         }
+                        "sync_completed" -> {
+                            val sessionId = json.optString("session_id", "")
+                            Log.d("WebSocketManager", "✅ Sync completed for session: $sessionId")
+                            listeners.forEach { it.onSyncCompleted(sessionId) }
+                        }
+                        "branch_created" -> {
+                            val branchId       = json.optString("branch_id", "")
+                            val pivotMessageId = json.optString("pivot_message_id", "")
+                            val sessionId      = json.optString("session_id", joinedSessionId ?: "")
+
+                            val branchInfoObj  = json.optJSONObject("branch_info")
+                            val branchIndex    = branchInfoObj?.optInt("index", 0) ?: 0
+                            val branchTotal    = branchInfoObj?.optInt("total", 1) ?: 1
+
+                            Log.d("WebSocketManager",
+                                "🌿 branch_created: branch=$branchId pivot=$pivotMessageId ($branchIndex/$branchTotal)")
+
+                            listeners.forEach {
+                                it.onBranchCreated(
+                                    sessionId      = sessionId,
+                                    branchId       = branchId,
+                                    pivotMessageId = pivotMessageId,
+                                    branchIndex    = branchIndex,
+                                    branchTotal    = branchTotal,
+                                )
+                            }
+                        }
+
                         else -> {
                             Log.d("WebSocketManager", "Unknown message type: $type")
                         }
@@ -238,7 +286,30 @@ class WebSocketManager @Inject constructor() {
             }
         })
     }
+    // Thêm 2 helper vào WebSocketManager
+    private fun parseJsonObject(json: JSONObject): Map<String, Any?> {
+        val map = mutableMapOf<String, Any?>()
+        json.keys().forEach { key ->
+            map[key] = when (val v = json.get(key)) {
+                is JSONObject             -> parseJsonObject(v)
+                is org.json.JSONArray     -> parseJsonArray(v)
+                JSONObject.NULL           -> null
+                else                      -> v
+            }
+        }
+        return map
+    }
 
+    private fun parseJsonArray(arr: org.json.JSONArray): List<Any?> {
+        return (0 until arr.length()).map { i ->
+            when (val v = arr.get(i)) {
+                is JSONObject             -> parseJsonObject(v)
+                is org.json.JSONArray     -> parseJsonArray(v)
+                JSONObject.NULL           -> null
+                else                      -> v
+            }
+        }
+    }
     private fun startPingJob(webSocket: okhttp3.WebSocket) {
         pingJob?.cancel()
         pingJob = CoroutineScope(Dispatchers.IO).launch {
