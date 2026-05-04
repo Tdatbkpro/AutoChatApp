@@ -16,5 +16,6 @@ data class MessageEntity(
     val timestamp: Long,
     val extraData: String? = null,
     val isSynced: Boolean = false,
-    val isOffline: Boolean = false
+    val isOffline: Boolean = false,
+    val branchId : String? = null,
 )

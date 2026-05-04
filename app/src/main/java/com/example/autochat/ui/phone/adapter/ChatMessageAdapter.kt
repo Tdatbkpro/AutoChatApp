@@ -28,6 +28,7 @@ import com.example.autochat.domain.repository.HasCodeExecutor
 import com.example.autochat.ui.phone.BranchManager
 import com.example.autochat.ui.phone.MarkdownRenderer
 import com.example.autochat.ui.phone.MessageActionsPopup
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import io.noties.markwon.Markwon
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -180,7 +181,6 @@ class ChatMessageAdapter(
             VIEW_TYPE_USER -> UserViewHolder(
                 binding        = ItemMessageUserBinding.inflate(inflater, parent, false),
                 onLongPress    = onUserMessageLongPress,
-                onRetry        = onRetry,
                 onEdit         = onEdit,
                 onSwitchBranch = onSwitchBranch,
             )
@@ -190,7 +190,8 @@ class ChatMessageAdapter(
             )
             else -> BotViewHolder(
                 ItemMessageBotBinding.inflate(inflater, parent, false),
-                getOrCreateRenderer(parent.context)
+                getOrCreateRenderer(parent.context),
+                onRetry
             )
         }
     }
@@ -198,7 +199,11 @@ class ChatMessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is UserViewHolder    -> holder.bind(getItem(position), position)
-            is BotViewHolder     -> holder.bind(getItem(position))
+            is BotViewHolder     -> {
+                // ✅ Lấy user message trước bot message
+                val userMsg = if (position > 0) getItem(position - 1) else null
+                holder.bind(getItem(position), userMsg)
+            }
             is BotNewsViewHolder -> holder.bind(getItem(position))
         }
     }
@@ -221,7 +226,6 @@ class ChatMessageAdapter(
     class UserViewHolder(
         private val binding: ItemMessageUserBinding,
         private val onLongPress: ((Int) -> Unit)? = null,
-        private val onRetry: ((Message) -> Unit)? = null,
         private val onEdit:  ((Message, String) -> Unit)? = null,
         private val onSwitchBranch: ((pivotId: String, delta: Int) -> Unit)? = null,
     ) : RecyclerView.ViewHolder(binding.root) {
@@ -252,7 +256,7 @@ class ChatMessageAdapter(
                 binding.root.performHapticFeedback(
                     android.view.HapticFeedbackConstants.LONG_PRESS
                 )
-                if (onRetry != null || onEdit != null) {
+                if (onEdit != null) {
                     MessageActionsPopup.show(
                         context    = binding.root.context,
                         anchorView = binding.root,
@@ -260,9 +264,12 @@ class ChatMessageAdapter(
                         touchY     = lastTouchY,
                         message    = msg,
                         listener   = object : MessageActionsPopup.Listener {
-                            override fun onRetry(message: Message) { onRetry?.invoke(message) }
+                            override fun onSelectText(message: Message) {
+                                // ✅ Hiện bottom sheet chọn văn bản
+                                showSelectTextSheet(binding.root.context, message.content)
+                            }
                             override fun onEdit(message: Message, newContent: String) {
-                                onEdit?.invoke(message, newContent)
+                                onEdit.invoke(message, newContent)
                             }
                         }
                     )
@@ -272,20 +279,6 @@ class ChatMessageAdapter(
                 true
             }
 
-            // ── Branch navigator ─────────────────────────────────────────────────
-            //
-            // KEY LOGIC:
-            // - msg.id = id của message này (user message trong nhánh gốc hoặc nhánh mới)
-            // - BranchManager key = pivotMessageId = id của message bị edit
-            //
-            // Trường hợp 1: Message này là pivot (bị edit tạo nhánh mới)
-            //   → BranchManager.getBranchesAt(msg.id) trả > 1 nhánh
-            //
-            // Trường hợp 2: Message này là message đầu của nhánh mới
-            //   → msg.parentMessageId = pivotMessageId
-            //   → BranchManager.getBranchesAt(msg.parentMessageId) trả > 1 nhánh
-            //
-            // Ưu tiên check msg.id trước, nếu không có thì check parentMessageId
 
             val pivotKey = when {
                 BranchManager.hasBranches(msg.id)                            -> msg.id
@@ -320,14 +313,53 @@ class ChatMessageAdapter(
                 navLayout?.visibility = View.GONE
             }
         }
+
+        private fun showSelectTextSheet(context: Context, content: String) {
+            val dialog = BottomSheetDialog(context, R.style.BottomSheetGitHubTheme)
+            val sheetView = LayoutInflater.from(context)
+                .inflate(R.layout.bottom_sheet_response, null)
+
+            // Dùng lại layout bottom_sheet_response
+            // Nhưng thay expandedContentContainer bằng TextView selectable
+            val container = sheetView.findViewById<LinearLayout>(R.id.expandedContentContainer)
+            val tv = TextView(context).apply {
+                text = content
+                setTextIsSelectable(true)  // ✅ cho phép chọn văn bản
+                textSize = 15f
+                setTextColor(0xFFE6EDF3.toInt())
+                setPadding(0, 8, 0, 8)
+            }
+            container.addView(tv)
+
+            // Copy all
+            val tvCopyAllLabel = sheetView.findViewById<TextView>(R.id.tvCopyAllLabel)
+            sheetView.findViewById<LinearLayout>(R.id.btnCopyAll).setOnClickListener {
+                val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cb.setPrimaryClip(ClipData.newPlainText("message", content))
+                tvCopyAllLabel.text = "Copied!"
+                tvCopyAllLabel.setTextColor(0xFF3FB950.toInt())
+                it.postDelayed({
+                    tvCopyAllLabel.text = "Copy all"
+                    tvCopyAllLabel.setTextColor(0xFF8B949E.toInt())
+                }, 2000)
+            }
+
+            dialog.setContentView(sheetView)
+            dialog.behavior.apply {
+                state         = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                skipCollapsed = true
+            }
+            dialog.show()
+        }
     }
 
     // ── BotViewHolder (giữ nguyên) ────────────────────────────────────────────
 
     class BotViewHolder(
         private val binding: ItemMessageBotBinding,
-        private val renderer: MarkdownRenderer
-    ) : RecyclerView.ViewHolder(binding.root) {
+        private val renderer: MarkdownRenderer,
+        private val onRetry: ((Message) -> Unit)? = null,
+        ) : RecyclerView.ViewHolder(binding.root) {
 
         private var textToSpeech: android.speech.tts.TextToSpeech? = null
         private var currentClean: String = ""
@@ -348,14 +380,21 @@ class ChatMessageAdapter(
             renderer.renderStreaming(binding.contentContainer, currentClean)
         }
 
-        fun bind(msg: Message) {
+        fun bind(msg: Message, userMessage: Message? = null) {
             val msgKey = "${msg.id}_${msg.content.length}"
             if (boundMessageId == msgKey) return
             boundMessageId = msgKey
 
             binding.contentContainer.removeAllViews()
             binding.tvTime.text = formatTime(msg.timestamp)
-
+            binding.btnRetry.setOnClickListener {
+                if (userMessage != null) {
+                    onRetry?.invoke(userMessage)  // ✅ truyền user message
+                }
+            }
+            binding.btnRetry.visibility = if (
+                msg.content.isEmpty() || userMessage == null || userMessage.sender != "user"
+            ) View.GONE else View.VISIBLE
             if (msg.content.isEmpty()) {
                 binding.lottieTyping.visibility    = View.VISIBLE
                 binding.lottieTyping.playAnimation()
@@ -415,7 +454,7 @@ class ChatMessageAdapter(
         }
 
         private fun showFullResponseSheet(context: Context, rawContent: String, cleanContent: String) {
-            val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(
+            val dialog = BottomSheetDialog(
                 context, R.style.BottomSheetGitHubTheme
             )
             val sheetView = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_response, null)

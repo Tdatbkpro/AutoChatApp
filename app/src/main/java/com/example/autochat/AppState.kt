@@ -6,7 +6,7 @@ import com.example.autochat.ui.car.VoiceSearchScreen
 
 object AppState {
     var chatScreen: MyChatScreen? = null
-
+    var currentBranchId : String? = null
     var isConnectServer : Boolean = false
     var voiceScreen: VoiceSearchScreen? = null
     var currentSession: ChatSession? = null

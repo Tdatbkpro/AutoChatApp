@@ -403,6 +403,13 @@ class HistoryDetailScreen(
         scope.launch {
             chatRepository.getMessagesFlow(session.id).collect { list ->
                 messages = list
+
+                // ✅ Lấy branchId từ message mới nhất
+                val latestBranchId = list.lastOrNull()?.branchId
+                if (latestBranchId != null) {
+                    AppState.currentBranchId = latestBranchId
+                }
+
                 invalidate()
             }
         }

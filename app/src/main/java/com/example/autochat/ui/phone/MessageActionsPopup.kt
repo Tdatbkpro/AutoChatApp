@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 object MessageActionsPopup {
 
     interface Listener {
-        fun onRetry(message: Message)
+        fun onSelectText(message: Message)
         fun onEdit(message: Message, newContent: String)
     }
 
@@ -93,9 +93,9 @@ object MessageActionsPopup {
         }
 
         // ── Actions ───────────────────────────────────────────────────────────
-        binding.actionRetry.setOnClickListener {
+        binding.actionSelect.setOnClickListener {
             dismissWithAnim(binding.root, popup)
-            listener.onRetry(message)
+            listener.onSelectText(message)
         }
 
         binding.actionCopy.setOnClickListener {

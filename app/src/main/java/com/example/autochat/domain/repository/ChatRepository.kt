@@ -94,7 +94,8 @@ interface ChatRepository {
     suspend fun sendOfflineMessage(
         sessionId: String?,
         content: String,
-        onToken: (String) -> Unit
+        onToken: (String) -> Unit,
+        branchId: String?,
     ): Result<SendMessageResult>
     suspend fun togglePinSession(sessionId: String)
     suspend fun saveBotMessage(sessionId: String, content: String, messageId: String)
@@ -112,6 +113,8 @@ interface ChatRepository {
     ): List<Message>
     suspend fun getLatestBranchId(sessionId: String): String
     /** Lấy danh sách nhánh tại 1 pivot message (cho navigator) */
+    suspend fun refreshBranchCache(sessionId: String, branchId: String)
+
     suspend fun getBranchesAtMessage(
         sessionId:  String,
         messageId:  String,

@@ -48,6 +48,7 @@ import okhttp3.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.Retrofit
 import java.util.UUID
 import javax.inject.Named
@@ -139,16 +140,6 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     // ── refreshSessions — FIX CHÍNH ──────────────────────────────────────────
-    //
-    // Bug cũ: chỉ lấy session Room có isSynced=false → session online (isSynced=true)
-    //         hoặc session chưa có trong Room bị mất hoàn toàn khi offline.
-    //
-    // Fix:
-    //   1. Luôn load TẤT CẢ session từ Room trước → hiển thị ngay, không chờ network.
-    //   2. Thử gọi server để lấy server sessions.
-    //   3. Merge: server sessions được cache vào Room (upsert), rồi merge với local.
-    //   4. Nếu server lỗi → dùng toàn bộ Room (bao gồm cả session đã sync trước đó).
-
     private suspend fun refreshSessions() {
         // ── Bước 1: Hiển thị Room ngay lập tức (không chờ network) ─────────
         val allLocalSessions = database.sessionDao().getAllSessions()
@@ -166,54 +157,55 @@ class ChatRepositoryImpl @Inject constructor(
 
         // ── Bước 2: Thử fetch server ─────────────────────────────────────────
         try {
-            val token = getAccessToken()
-            val serverSessions = chatApi.getSessions("Bearer $token").map { it.toDomain() }
+                val token = getAccessToken()
+                val serverSessions = chatApi.getSessions("Bearer $token").map { it.toDomain() }
 
-            // ── Bước 3: Cache server sessions vào Room (upsert) ──────────────
-            // Để lần sau offline vẫn còn đủ data
-            serverSessions.forEach { session ->
-                val existing = database.sessionDao().getSession(session.id)
-                if (existing == null) {
-                    database.sessionDao().insert(
-                        SessionEntity(
-                            id        = session.id,
-                            userId    = session.userId.ifEmpty { AppState.currentUserId },
-                            title     = session.title,
-                            createdAt = session.createdAt,
-                            updatedAt = session.updatedAt,
-                            isPinned  = session.isPinned,
-                            isSynced  = true
+                // ── Bước 3: Cache server sessions vào Room (upsert) ──────────────
+                // Để lần sau offline vẫn còn đủ data
+                serverSessions.forEach { session ->
+                    val existing = database.sessionDao().getSession(session.id)
+                    if (existing == null) {
+                        database.sessionDao().insert(
+                            SessionEntity(
+                                id = session.id,
+                                userId = session.userId.ifEmpty { AppState.currentUserId },
+                                title = session.title,
+                                createdAt = session.createdAt,
+                                updatedAt = session.updatedAt,
+                                isPinned = session.isPinned,
+                                isSynced = true
+                            )
                         )
-                    )
-                } else {
-                    // Cập nhật title / pin / updatedAt từ server
-                    database.sessionDao().insert(
-                        existing.copy(
-                            title     = session.title,
-                            updatedAt = session.updatedAt,
-                            isPinned  = session.isPinned,
-                            isSynced  = true
+                    } else {
+                        // Cập nhật title / pin / updatedAt từ server
+                        database.sessionDao().insert(
+                            existing.copy(
+                                title = session.title,
+                                updatedAt = session.updatedAt,
+                                isPinned = session.isPinned,
+                                isSynced = true
+                            )
                         )
-                    )
+                    }
                 }
-            }
 
-            // ── Bước 4: Merge server + local-only (chưa sync) ────────────────
-            val localOnlySessions = database.sessionDao().getAllSessions()
-                .first()
-                .filter { !it.isSynced }
-                .map { it.toDomain() }
+                // ── Bước 4: Merge server + local-only (chưa sync) ────────────────
+                val localOnlySessions = database.sessionDao().getAllSessions()
+                    .first()
+                    .filter { !it.isSynced }
+                    .map { it.toDomain() }
 
-            _sessions.value = (serverSessions + localOnlySessions)
-                .distinctBy { it.id }
-                .sortedWith(
-                    compareByDescending<ChatSession> { it.isPinned }
-                        .thenByDescending { it.updatedAt }
+                _sessions.value = (serverSessions + localOnlySessions)
+                    .distinctBy { it.id }
+                    .sortedWith(
+                        compareByDescending<ChatSession> { it.isPinned }
+                            .thenByDescending { it.updatedAt }
+                    )
+
+                Log.d(
+                    "ChatRepo",
+                    "refreshSessions: ${serverSessions.size} from server + ${localOnlySessions.size} local-only"
                 )
-
-            Log.d("ChatRepo",
-                "refreshSessions: ${serverSessions.size} from server + ${localOnlySessions.size} local-only"
-            )
 
         } catch (e: Exception) {
             // ── Bước 4 (offline path): dùng toàn bộ Room ─────────────────────
@@ -248,7 +240,8 @@ class ChatRepositoryImpl @Inject constructor(
                         content   = entity.content,
                         sender    = entity.sender,
                         timestamp = entity.timestamp,
-                        extraData = null
+                        extraData = null,
+                        branchId = entity.branchId
                     )
                 }
                 .sortedBy { it.timestamp }
@@ -269,34 +262,35 @@ class ChatRepositoryImpl @Inject constructor(
                                 content   = entity.content,
                                 sender    = entity.sender,
                                 timestamp = entity.timestamp,
-                                extraData = null
+                                extraData = null,
+                                branchId = entity.branchId
                             )
                         }
                         .sortedBy { it.timestamp }
                     emit(messages)
                 }
+                return@flow
             }
             else {
                 val token = getAccessToken()
-                val serverMessages = chatApi.getMessages("Bearer $token", sessionId,branchId  = branchId?.takeIf { it != sessionId })
-                    .map { it.toDomain() }
-                    .sortedBy { it.timestamp }
-                    .toMutableList()
+                val serverMessages = withTimeoutOrNull(10_000) {  // ✅ timeout 10s thay vì 180s
+                    chatApi.getMessages(
+                        "Bearer $token", sessionId,
+                        branchId = branchId?.takeIf { it != sessionId }
+                    ).map { it.toDomain() }.sortedBy { it.timestamp }.toMutableList()
+                }
 
                 // Cache server messages vào Room (upsert) để dùng offline lần sau
-                cacheMessagesToRoom(sessionId, serverMessages)
+                if (serverMessages != null) {
+                    cacheMessagesToRoom(sessionId, serverMessages)
+                    loadPivotsForSession(sessionId, activeBranch = branchId ?: sessionId)
+                    messagesCache[sessionId] = serverMessages
+                    sharedFlow.emit(serverMessages.toList())
+                    emit(serverMessages.toList())
 
-                loadPivotsForSession(sessionId, activeBranch = branchId ?: sessionId)
-
-                messagesCache[sessionId] = serverMessages
-                sharedFlow.emit(serverMessages.toList())
-                emit(serverMessages.toList())
-
-                Log.d("ChatRepo", "getMessagesFlow: loaded ${serverMessages.size} from server")
-
-                // Tiếp tục collect real-time updates
-                sharedFlow.collect { updated ->
-                    emit(updated.sortedBy { it.timestamp })
+                    sharedFlow.collect { updated ->
+                        emit(updated.sortedBy { it.timestamp })
+                    }
                 }
             }
 
@@ -357,29 +351,38 @@ class ChatRepositoryImpl @Inject constructor(
     /** Upsert danh sách messages vào Room để dùng offline */
     private suspend fun cacheMessagesToRoom(sessionId: String, messages: List<Message>) {
         try {
-            messages.forEach { msg ->
-                val existing = database.messageDao().getMessageById(msg.id)
-                if (existing == null) {
-                    database.messageDao().insert(
-                        MessageEntity(
-                            id        = msg.id,
-                            sessionId = msg.sessionId,
-                            content   = msg.content,
-                            sender    = msg.sender,
-                            timestamp = msg.timestamp,
-                            extraData = null,
-                            isSynced  = true,
-                            isOffline = false
-                        )
+            database.messageDao().deleteBySession(sessionId)
+
+                messages.forEach { msg ->
+                database.messageDao().insert(
+                    MessageEntity(
+                        id        = msg.id,
+                        sessionId = msg.sessionId,
+                        content   = msg.content,
+                        sender    = msg.sender,
+                        timestamp = msg.timestamp,
+                        extraData = null,
+                        isSynced  = true,
+                        isOffline = false,
+                        branchId = msg.branchId
                     )
-                }
+                )
             }
-            Log.d("ChatRepo", "cacheMessagesToRoom: cached ${messages.size} messages for $sessionId")
+            Log.d("ChatRepo", "cacheMessagesToRoom: replaced ${messages.size} messages for $sessionId")
         } catch (e: Exception) {
             Log.w("ChatRepo", "cacheMessagesToRoom failed: ${e.message}")
         }
     }
 
+    override suspend fun refreshBranchCache(sessionId: String, branchId: String) {
+        try {
+            val messages = getBranchMessages(sessionId, branchId)
+            cacheMessagesToRoom(sessionId, messages)
+            Log.d("ChatRepo", "refreshBranchCache: cached ${messages.size} messages for branch $branchId")
+        } catch (e: Exception) {
+            Log.w("ChatRepo", "refreshBranchCache failed (non-critical): ${e.message}")
+        }
+    }
     // ── Stream ────────────────────────────────────────────────────────────────
 
     override fun streamMessage(
@@ -986,7 +989,8 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun sendOfflineMessage(
         sessionId: String?,
         content: String,
-        onToken: (String) -> Unit
+        onToken: (String) -> Unit,
+        branchId: String?,
     ): Result<ChatRepository.SendMessageResult> {
         return try {
             if (!llmEngine.isLoaded()) {
@@ -1004,7 +1008,7 @@ class ChatRepositoryImpl @Inject constructor(
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis(),
                     isPinned  = false,
-                    isSynced  = false
+                    isSynced  = false,
                 )
                 database.sessionDao().insert(sessionEntity)
                 val newSession = sessionEntity.toDomain()
@@ -1026,7 +1030,8 @@ class ChatRepositoryImpl @Inject constructor(
                     timestamp = System.currentTimeMillis(),
                     extraData = null,
                     isSynced  = false,
-                    isOffline = true
+                    isOffline = true,
+                    branchId = branchId ?: finalSessionId
                 )
             )
 
@@ -1057,14 +1062,15 @@ class ChatRepositoryImpl @Inject constructor(
                             timestamp = System.currentTimeMillis(),
                             extraData = null,
                             isSynced  = false,
-                            isOffline = true
+                            isOffline = true,
+                            branchId = branchId ?: finalSessionId
                         )
                     )
                     database.sessionDao().getSession(finalSessionId)?.let {
                         database.sessionDao().insert(it.copy(updatedAt = System.currentTimeMillis()))
                     }
                     if (AppState.isConnectServer) {
-                        syncMessagesRealtime(finalSessionId, userMsgId, botMsgId, content, finalContent)
+                        syncMessagesRealtime(finalSessionId,branchId ?: finalSessionId, userMsgId, botMsgId, content, finalContent)
                     }
                     generateDone = true
                 }
@@ -1105,6 +1111,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
     private fun syncMessagesRealtime(
         sessionId: String,
+        branchId: String,
         userMsgId: String,
         botMsgId: String,
         userContent: String,
@@ -1128,7 +1135,8 @@ class ChatRepositoryImpl @Inject constructor(
                             sender = "user",
                             timestamp = System.currentTimeMillis(),
                             sessionTitle = sessionTitle,
-                            extraData = null
+                            extraData = null,
+                            branchId = branchId
                         )
                     )
                     if (r.isSuccessful || r.code() == 400) {
@@ -1150,7 +1158,8 @@ class ChatRepositoryImpl @Inject constructor(
                             sender = "bot",
                             timestamp = System.currentTimeMillis(),
                             sessionTitle = sessionTitle,
-                            extraData = null
+                            extraData = null,
+                            branchId = branchId
                         )
                     )
                     if (r.isSuccessful || r.code() == 400) {

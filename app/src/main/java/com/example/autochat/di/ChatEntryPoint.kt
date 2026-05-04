@@ -3,6 +3,7 @@ package com.example.autochat.di
 import com.example.autochat.data.repository.ReadHistoryRepository
 import com.example.autochat.domain.repository.AuthRepository
 import com.example.autochat.domain.repository.ChatRepository
+import com.example.autochat.llm.LlmEngine
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -13,5 +14,5 @@ interface ChatEntryPoint {
     fun chatRepository(): ChatRepository
     fun authRepository(): AuthRepository
     fun readHistoryRepository(): ReadHistoryRepository
-
+    fun llmEngine(): LlmEngine
 }

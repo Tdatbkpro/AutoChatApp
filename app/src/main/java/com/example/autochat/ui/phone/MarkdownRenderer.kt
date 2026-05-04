@@ -359,20 +359,6 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
     }
 
     /** Cập nhật label của ▶ Run button theo RunState hiện tại */
-    private fun updateRunBtnState(binding: ItemCodeBlockBinding, blockId: String) {
-        val state = RunStateManager.getState(blockId)
-        val label = when (state.status) {
-            RunStateManager.Status.Running -> "⏳ Running…"
-            RunStateManager.Status.Done    -> when (state.result) {
-                is CodeResult.Success -> "✅ Done"
-                else                  -> "❌ Error"
-            }
-            else -> "▶  Run"
-        }
-        // Tìm TextView bên trong btnRunCode (chỉ có 1 TextView con)
-        val tv = (binding.btnRunCode as? LinearLayout)?.getChildAt(0) as? TextView
-        tv?.text = label
-    }
     private fun applyRunStateToFooter(binding: ItemCodeBlockBinding, state: RunStateManager.RunState) {
         // Tìm TextView bên trong btnRunCode
         val tvRun = (binding.btnRunCode as? LinearLayout)
@@ -382,14 +368,14 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
 
         when (state.status) {
             RunStateManager.Status.Idle -> {
-                tvRun.text = "▶  Run"
+                tvRun.text = "▶ Run"
                 tvRun.setTextColor(0xFF3FB950.toInt())
                 binding.btnRunCode.isEnabled = true
                 binding.btnRunCode.alpha = 1f
             }
 
             RunStateManager.Status.Running -> {
-                tvRun.text = "⏳  Running…"
+                tvRun.text = "⏳ Running…"
                 tvRun.setTextColor(0xFF8B949E.toInt())
                 binding.btnRunCode.isEnabled = false
                 binding.btnRunCode.alpha = 0.6f
@@ -402,23 +388,23 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
                     is CodeResult.Success -> {
                         // Hiện thêm thời gian nếu có
                         val timeLabel = state.time?.let { " · ${it}s" } ?: ""
-                        tvRun.text = "✅  Done$timeLabel"
+                        tvRun.text = "✅ Done$timeLabel"
                         tvRun.setTextColor(0xFF3FB950.toInt())
                     }
                     is CodeResult.CompileError -> {
-                        tvRun.text = "⚠️  Compile error"
+                        tvRun.text = "⚠️ Compile error"
                         tvRun.setTextColor(0xFFFFB347.toInt())
                     }
                     is CodeResult.RuntimeError -> {
-                        tvRun.text = "❌  Runtime error"
+                        tvRun.text = "❌ Runtime error"
                         tvRun.setTextColor(0xFFFF6B6B.toInt())
                     }
                     is CodeResult.Error -> {
-                        tvRun.text = "❌  Error"
+                        tvRun.text = "❌ Error"
                         tvRun.setTextColor(0xFFFF6B6B.toInt())
                     }
                     null -> {
-                        tvRun.text = "▶  Run"
+                        tvRun.text = "▶ Run"
                         tvRun.setTextColor(0xFF3FB950.toInt())
                     }
                 }
@@ -441,7 +427,7 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
         val binding = BottomSheetRunCodeBinding.inflate(LayoutInflater.from(context))
 
         // Title
-        binding.tvRunStatus.text = "▶  $language"
+        binding.tvRunStatus.text = "▶ $language"
 
         // ── Restore state nếu đã có ─────────────────────────────────────────────
         fun applyState(state: RunStateManager.RunState) {
@@ -479,7 +465,7 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
 
                     when (result) {
                         is CodeResult.Success -> {
-                            binding.tvRunStatus.text = "✅  $language"
+                            binding.tvRunStatus.text = "✅ $language"
                             binding.tvRunStatus.setTextColor(0xFF3FB950.toInt())
                             binding.tvRunOutput.text = result.output
                             binding.tvRunOutput.setTextColor(0xFFE6EDF3.toInt())
@@ -491,14 +477,14 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
                             }
                         }
                         is CodeResult.CompileError -> {
-                            binding.tvRunStatus.text = "❌  Compile error"
+                            binding.tvRunStatus.text = "❌ Compile error"
                             binding.tvRunStatus.setTextColor(0xFFFF6B6B.toInt())
                             binding.tvRunOutput.text = result.error
                             binding.tvRunOutput.setTextColor(0xFFFF6B6B.toInt())
                             binding.layoutMeta.visibility = View.GONE
                         }
                         is CodeResult.RuntimeError -> {
-                            binding.tvRunStatus.text = "⚠️  Runtime error"
+                            binding.tvRunStatus.text = "⚠️ Runtime error"
                             binding.tvRunStatus.setTextColor(0xFFFFB347.toInt())
                             binding.tvRunOutput.text = result.error
                             binding.tvRunOutput.setTextColor(0xFFFFB347.toInt())

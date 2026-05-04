@@ -9,5 +9,6 @@ data class OfflineMessageSync(
     @SerializedName("sender") val sender: String,
     @SerializedName("timestamp") val timestamp: Long,
     @SerializedName("session_title") val sessionTitle: String? = null,
-    @SerializedName("extra_data") val extraData: Map<String, Any?>? = null
+    @SerializedName("extra_data") val extraData: Map<String, Any?>? = null,
+    @SerializedName("branch_id") val branchId : String? = null
 )

@@ -100,7 +100,8 @@ class SyncManager @Inject constructor(
                     sender       = msg.sender,
                     timestamp    = msg.timestamp,
                     sessionTitle = sessionTitleMap[msg.sessionId],
-                    extraData    = null
+                    extraData    = null,
+                    branchId = msg.branchId
                 )
             }
 

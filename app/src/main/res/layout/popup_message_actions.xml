@@ -14,7 +14,7 @@
 
     <!-- Retry -->
     <LinearLayout
-        android:id="@+id/actionRetry"
+        android:id="@+id/actionSelect"
         android:layout_width="64dp"
         android:layout_height="56dp"
         android:orientation="vertical"
@@ -26,14 +26,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="↺"
+            android:text="📃"
             android:textSize="20sp"
             android:textColor="#58A6FF"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Retry"
+            android:text="Detail"
             android:textSize="10sp"
             android:textColor="#8B949E"
             android:layout_marginTop="2dp"/>

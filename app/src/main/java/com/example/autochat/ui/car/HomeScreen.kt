@@ -23,7 +23,6 @@ class HomeScreen(carContext: CarContext) : Screen(carContext) {
                                 invalidate()
                             })
                         )
-
                     })
                     .addItem(buildGridItem(R.drawable.ic_news, "Tin tức", "Đọc tin mới nhất") {
                         AppState.currentEndpoint = "news"

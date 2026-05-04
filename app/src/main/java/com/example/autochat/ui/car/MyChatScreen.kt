@@ -760,138 +760,86 @@ class MyChatScreen(carContext: CarContext) : Screen(carContext), TextToSpeech.On
 
     // ── Send message (FIX: không xóa temp, merge kết quả vào list) ───────
 
-//    fun addUserMessage(text: String, botMessage: String?, endpoint: String = AppState.currentEndpoint) {
-//        if (isSending) {
-//            CarToast.makeText(carContext, "⏳ Đang gửi...", CarToast.LENGTH_SHORT).show()
-//            return
-//        }
-//        isMicOpen = false; isSending = true; isWaitingResponse = true
-//
-//        val tempId = "temp_${System.currentTimeMillis()}"
-//        val tempUserMsg = Message(
-//            id = tempId, sessionId = AppState.currentSession?.id ?: "",
-//            content = text, sender = "user", timestamp = System.currentTimeMillis()
-//        )
-//        messages.add(tempUserMsg); invalidate()
-//
-//        scope.launch {
-//            try {
-//                val result = chatRepository.sendMessage(
-//                    sessionId  = AppState.currentSession?.id,
-//                    content    = text,
-//                    endpoint   = endpoint,          // ← dùng endpoint đúng
-//                    botMessage = botMessage
-//                )
-//
-//                if (AppState.currentSession?.id != result.sessionId) {
-//                    AppState.currentSession = ChatSession(
-//                        id = result.sessionId, userId = AppState.currentUserId,
-//                        title = result.sessionTitle,
-//                        createdAt = System.currentTimeMillis(),
-//                        updatedAt = System.currentTimeMillis()
-//                    )
-//                    // Push ChatSessionScreen sau khi có session mới
-//                    screenManager.push(
-//                        ChatSessionScreen(
-//                            carContext = carContext,
-//                            chatScreen = this@MyChatScreen,
-//                            sessionId = result.sessionId,
-//                            endpoint = endpoint
-//                        )
-//                    )
-//                    observeMessages(result.sessionId)
-//                }
-//
-//                val realUserMsg = tempUserMsg.copy(id = result.userMessage.id ?: tempId, sessionId = result.sessionId)
-//                val botMsg = result.botMessage.copy(sessionId = result.sessionId)
-//                messages.removeAll { it.id == tempId }
-//                if (messages.none { it.id == realUserMsg.id }) messages.add(realUserMsg)
-//                if (messages.none { it.id == botMsg.id }) messages.add(botMsg)
-//                isWaitingResponse = false
-//
-//                val extraDataType = extractTypeExtraData(botMsg)
-//                when (extraDataType) {
-//                    "news_list" -> {
-//                        val extraData = extractNewsExtraData(botMsg)
-//                        if (extraData != null) {
-//                            invalidate()
-//                            screenManager.push(NewsListScreen(carContext, this@MyChatScreen, extraData))
-//                        }
-//                    }
-//                    "navigation" -> {
-//                        val navData = extractNavigationData(botMsg)
-//                        val navQuery = navData?.get("nav_query") as? String
-//                        val displayName = navData?.get("target") as? String
-//                        if (navQuery != null && displayName != null) {
-//                            speakText(botMsg.content); invalidate()
-//                            showNavigationConfirmDialog(navQuery, displayName)
-//                        }
-//                    }
-//                    else -> { speakText(botMsg.content); invalidate() }
-//                }
-//            } catch (e: Exception) {
-//                messages.removeAll { it.id == tempId }
-//                isWaitingResponse = false
-//                CarToast.makeText(carContext, "Lỗi kết nối!", CarToast.LENGTH_SHORT).show()
-//                invalidate()
-//            } finally {
-//                isSending = false
-//            }
-//        }
-//    }
-fun sendMessageOnly(
-    text: String,
-    botMessage: String?,
-    endpoint: String = AppState.currentEndpoint
-) {
-    if (isSending) return
-    isSending = true
-    isMicOpen = false
+    fun sendMessageOnly(
+        text: String,
+        botMessage: String?,
+        endpoint: String = AppState.currentEndpoint
+    ) {
+        if (isSending) return
+        isSending = true
+        isMicOpen = false
 
-    val existingSessionId = AppState.currentSession?.id
+        val existingSessionId = AppState.currentSession?.id
 
-    scope.launch {
-        try {
-            val result = chatRepository.sendMessage(
-                sessionId  = existingSessionId,
-                content    = text,
-                endpoint   = endpoint,
-                botMessage = botMessage
-            )
-
-            // Cập nhật session nếu mới tạo
-            if (existingSessionId != result.sessionId) {
-                AppState.currentSession = ChatSession(
-                    id        = result.sessionId,
-                    userId    = AppState.currentUserId,
-                    title     = result.sessionTitle,
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis(),
-                    endpoint  = endpoint
+        scope.launch {
+            try {
+                val result = chatRepository.sendMessage(
+                    sessionId  = existingSessionId,
+                    content    = text,
+                    endpoint   = endpoint,
+                    botMessage = botMessage
                 )
-                AppState.currentEndpoint = endpoint
+
+                if (existingSessionId != result.sessionId) {
+                    AppState.currentSession = ChatSession(
+                        id        = result.sessionId,
+                        userId    = AppState.currentUserId,
+                        title     = result.sessionTitle,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                        endpoint  = endpoint
+                    )
+                    AppState.currentEndpoint = endpoint
+                }
+
+                currentChatSessionScreen?.onSessionReady(
+                    realSessionId = result.sessionId,
+                    botMessage    = result.botMessage
+                )
+
+            } catch (e: Exception) {
+                android.util.Log.e("CHAT", "sendMessageOnly online failed: ${e.message}")
+
+                val llmEngine = EntryPointAccessors.fromApplication(
+                    carContext.applicationContext,
+                    ChatEntryPoint::class.java
+                ).llmEngine()
+
+                if (llmEngine.isLoaded()) {
+                    val offlineResult = chatRepository.sendOfflineMessage(
+                        sessionId = existingSessionId,
+                        content   = text,
+                        onToken   = { },
+                        branchId = AppState.currentBranchId
+                    )
+
+                    // ✅ withContext Main để đảm bảo UI update đúng thread
+                    withContext(Dispatchers.Main) {
+                        offlineResult.onSuccess { result ->
+                            AppState.currentSession = AppState.currentSession ?: ChatSession(
+                                id        = result.sessionId,
+                                userId    = AppState.currentUserId,
+                                title     = result.sessionTitle,
+                                createdAt = System.currentTimeMillis(),
+                                updatedAt = System.currentTimeMillis(),
+                                endpoint  = endpoint
+                            )
+                            currentChatSessionScreen?.onSessionReady(
+                                realSessionId = result.sessionId,
+                                botMessage    = result.botMessage
+                            )
+                        }.onFailure {
+                            CarToast.makeText(carContext, "Lỗi kết nối!", CarToast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    CarToast.makeText(carContext, "Mất kết nối, chưa có model offline", CarToast.LENGTH_SHORT).show()
+                }
+            } finally {
+                isSending = false
             }
-
-            // Thông báo cho ChatSessionScreen hiển thị kết quả
-            currentChatSessionScreen?.onSessionReady(
-                realSessionId = result.sessionId,
-                botMessage    = result.botMessage
-            )
-
-        } catch (e: Exception) {
-            android.util.Log.e("CHAT", "sendMessageOnly error: ${e.message}")
-            CarToast.makeText(carContext, "Lỗi kết nối!", CarToast.LENGTH_SHORT).show()
-
-            // Nếu session screen chưa có data thật → pop nó đi
-            if (AppState.currentSession == null) {
-                currentChatSessionScreen = null
-                // Không pop ở đây — để user tự back, tránh double-pop
-            }
-        } finally {
-            isSending = false
         }
     }
-}
     fun addUserMessage(
         text: String,
         botMessage: String?,

@@ -133,9 +133,6 @@ class ChatFragment : Fragment() {
 
         // ── Khởi tạo adapter với callback mở chi tiết bài báo ──
 
-//        adapter.setOnUserMessageLongPress { position ->
-//            showUserMessagesButton()
-//        }
         initAdapter()
         AppState.currentSessionId?.let { BranchManager.init(it) }
 
@@ -362,7 +359,12 @@ class ChatFragment : Fragment() {
                 if (streamIdx != -1) cur[streamIdx] = result.botMessage
                 adapter.submitList(cur.toList())
                 scrollToBottom()
-
+                launch {
+                    chatRepository.refreshBranchCache(
+                        sessionId = sessionId,
+                        branchId  = result.newBranchId,
+                    )
+                }
             } catch (e: Exception) {
                 // Rollback optimistic UI
                 adapter.submitList(adapter.currentList.filter {
@@ -1249,7 +1251,8 @@ class ChatFragment : Fragment() {
                         AppState.streamingContent = cur[idx].content
                         if (!userScrolledUp) scrollToBottom()  // ✅
                     }
-                }
+                },
+                branchId = currentBranchId
             )
 
             // ✅ Luôn reset button dù success hay fail
@@ -1343,6 +1346,14 @@ class ChatFragment : Fragment() {
                                 )
                                 webSocketManager.joinSession(chunk.sessionId)
                             }
+                            launch {
+                                AppState.currentSessionId?.let { sid ->
+                                    chatRepository.refreshBranchCache(
+                                        sessionId = sid,
+                                        branchId  = currentBranchId ?: sid,
+                                    )
+                                }
+                            }
 
                             localMessages.removeAll {
                                 it.id.startsWith("streaming_") || it.id.startsWith("opt_user_")
@@ -1400,6 +1411,16 @@ class ChatFragment : Fragment() {
                             adapter.submitList(msgList)
                             binding.recyclerView.post {
                                 adapter.notifyDataSetChanged()
+                            }
+                            if (!AppState.isConnectServer) {
+                                val latestBranchId = msgList
+                                    .lastOrNull { it.branchId != null }
+                                    ?.branchId
+
+                                if (latestBranchId != null && latestBranchId != currentBranchId) {
+                                    currentBranchId = latestBranchId
+                                    Log.d("ChatFragment", "Restored branchId from Room: $latestBranchId")
+                                }
                             }
                             if (msgList.isNotEmpty()) {
                                 binding.recyclerView.post {
