@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.autochat.databinding.ItemModelInfoBinding
 import com.example.autochat.llm.ModelManager
+import com.example.autochat.llm.ModelType
 
 class ModelAdapter(
     private val onDownload: (ModelManager.ModelInfo) -> Unit,
@@ -27,7 +28,8 @@ class ModelAdapter(
         val speed: String,
         val downloadedBytes: Long = 0,
         val totalBytes: Long = 0,
-        val isActive: Boolean = false
+        val isActive: Boolean = false,
+        val modelType: ModelType = ModelType.GGUF,
     )
 
     class ViewHolder(val binding: ItemModelInfoBinding) : RecyclerView.ViewHolder(binding.root)
@@ -55,8 +57,16 @@ class ModelAdapter(
             tvModelDesc.text = model.description
             tvModelSize.text = formatSize(model.sizeMB)
             tvModelFormat.visibility = View.VISIBLE
-            tvModelFormat.text = "GGUF"
-
+            tvModelFormat.text = when (state.info.modelType) {
+                             ModelType.ONNX -> "ONNX"
+                             else           -> "GGUF"
+                       }
+                tvModelFormat.setBackgroundColor(
+                             when (state.info.modelType) {
+                                 ModelType.ONNX -> 0xFF2255AA.toInt()   // xanh dương cho ONNX
+                                 else           -> 0xFF334433.toInt()   // xanh lá cho GGUF
+                             }
+                         )
             tvCustomBadge.visibility = if (model.id.startsWith("custom_")) View.VISIBLE else View.GONE
 
             btnDownload.visibility = View.GONE
@@ -72,8 +82,14 @@ class ModelAdapter(
             when {
                 state.isDownloading -> {
                     layoutProgress.visibility = View.VISIBLE
-                    btnPauseResume.text = "Tạm dừng"
-                    btnPauseResume.setOnClickListener { onPause(model) }
+                    if (state.modelType == ModelType.ONNX) {
+                                 // ONNX không hỗ trợ pause
+                                 btnPauseResume.visibility = View.GONE
+                             } else {
+                                 btnPauseResume.visibility = View.VISIBLE
+                                 btnPauseResume.text = "Tạm dừng"
+                                 btnPauseResume.setOnClickListener { onPause(model) }
+                             }
                     btnCancel.visibility = View.VISIBLE
                     btnCancel.setOnClickListener { onCancel(model) }
                     updateProgressOnly(holder, state)

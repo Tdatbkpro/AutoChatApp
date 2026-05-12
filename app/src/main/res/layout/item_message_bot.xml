@@ -3,25 +3,26 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="start"
     android:orientation="horizontal"
     android:padding="4dp"
     android:paddingStart="12dp"
-    android:paddingEnd="48dp"
-    android:gravity="start">
+    android:paddingEnd="8dp">
 
     <!-- Bot avatar -->
     <TextView
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:text="🤖"
-        android:textSize="20sp"
-        android:gravity="center"
+        android:layout_marginTop="4dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginTop="4dp"/>
+        android:gravity="center"
+        android:text="🤖"
+        android:textSize="20sp" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="360dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:orientation="vertical">
 
         <androidx.cardview.widget.CardView
@@ -35,46 +36,45 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                >
+                android:padding="12dp">
 
                 <!-- Lottie 3 chấm -->
                 <com.airbnb.lottie.LottieAnimationView
                     android:id="@+id/lottieTyping"
                     android:layout_width="48dp"
                     android:layout_height="16dp"
-                    app:lottie_fileName="lottie_typing.json"
+                    android:visibility="gone"
                     app:lottie_autoPlay="true"
-                    app:lottie_loop="true"
-                    android:visibility="gone" />
+                    app:lottie_fileName="lottie_typing.json"
+                    app:lottie_loop="true" />
 
                 <!-- Nội dung tin nhắn -->
-<!--                <TextView-->
-<!--                    android:id="@+id/tvContent"-->
-<!--                    android:textIsSelectable="true"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:textColor="#E0E0F0"-->
-<!--                    android:textSize="15sp"-->
-<!--                    android:lineSpacingMultiplier="1.3"-->
-<!--                    android:letterSpacing="0.01"-->
-<!--                    android:visibility="gone" />-->
+                <!--                <TextView-->
+                <!--                    android:id="@+id/tvContent"-->
+                <!--                    android:textIsSelectable="true"-->
+                <!--                    android:layout_width="wrap_content"-->
+                <!--                    android:layout_height="wrap_content"-->
+                <!--                    android:textColor="#E0E0F0"-->
+                <!--                    android:textSize="15sp"-->
+                <!--                    android:lineSpacingMultiplier="1.3"-->
+                <!--                    android:letterSpacing="0.01"-->
+                <!--                    android:visibility="gone" />-->
                 <LinearLayout
                     android:id="@+id/contentContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
                 <!-- Divider -->
                 <View
                     android:id="@+id/divider"
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#20FFFFFF"
                     android:layout_marginTop="6dp"
                     android:layout_marginBottom="6dp"
-                    android:visibility="gone"/>
+                    android:background="#20FFFFFF"
+                    android:visibility="gone" />
 
                 <!-- Action buttons -->
 
@@ -82,55 +82,56 @@
                     android:id="@+id/actionButtons"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:visibility="gone">
 
                     <TextView
                         android:id="@+id/tvTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
                         android:textColor="#60E0E0F0"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="8dp"/>
+                        android:textSize="11sp" />
 
                     <View
                         android:layout_width="0dp"
                         android:layout_height="0dp"
-                        android:layout_weight="1"/>
+                        android:layout_weight="1" />
 
                     <!-- Nút Copy -->
                     <LinearLayout
                         android:id="@+id/btnRetry"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_action_button"
                         android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_action_button"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:gravity="center">
 
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@drawable/ic_retry"
-                            app:tint="#AAAACC"/>
+                            app:tint="#AAAACC" />
                     </LinearLayout>
+
                     <LinearLayout
                         android:id="@+id/btnCopy"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:gravity="center"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_action_button"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:gravity="center">
 
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@drawable/ic_copy"
-                            app:tint="#AAAACC"/>
+                            app:tint="#AAAACC" />
                     </LinearLayout>
 
                     <!-- Nút Speak -->
@@ -138,19 +139,25 @@
                         android:id="@+id/btnSpeak"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_action_button"
                         android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_action_button"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:gravity="center">
 
                         <ImageView
+                            android:id="@+id/ivSpeakIcon"
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@drawable/ic_speaker"
-                            app:tint="#AAAACC"/>
+                            app:tint="#AAAACC" />
 
-
+                        <ProgressBar
+                            android:id="@+id/pbSpeakLoading"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:indeterminateTint="#4A90E2"
+                            android:visibility="gone" />
 
                     </LinearLayout>
 
@@ -160,35 +167,35 @@
                         android:id="@+id/btnExpand"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_action_button"
                         android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_action_button"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:gravity="center">
 
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@drawable/ic_expand"
-                            app:tint="#AAAACC"/>
+                            app:tint="#AAAACC" />
                     </LinearLayout>
                     <!-- Nút Stop -->
                     <LinearLayout
                         android:id="@+id/btnStop"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_action_button"
                         android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_action_button"
                         android:clickable="true"
                         android:focusable="true"
+                        android:gravity="center"
                         android:visibility="gone">
 
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
                             android:src="@drawable/ic_stop"
-                            app:tint="#FF6B6B"/>
+                            app:tint="#FF6B6B" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

@@ -1,5 +1,6 @@
 package com.example.autochat.ui.phone.fragment
 
+import android.R.attr.repeatCount
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
@@ -55,7 +56,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import androidx.core.graphics.toColorInt
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import com.example.autochat.llm.LlmEngineFactory
+import com.example.autochat.llm.LlmEngineInterface
+import com.example.autochat.tts.TTSManager
+import com.example.autochat.ui.phone.AudioPlayerController
 import com.example.autochat.ui.phone.BranchManager
+import com.example.autochat.ui.phone.viewmodel.ChatViewModel
 
 enum class SendMode { ONLINE, OFFLINE }
 @AndroidEntryPoint
@@ -65,8 +73,13 @@ class ChatFragment : Fragment() {
     private var downRawX = 0f
     private var downRawY = 0f
     private var isDragging = false
-    @Inject
-    lateinit var llmEngine: LlmEngine
+    @Inject lateinit var engineFactory: LlmEngineFactory
+    @Inject lateinit var llamaFallback: LlmEngine
+    @Inject lateinit var ttsManager: TTSManager
+    private val viewModel: ChatViewModel by viewModels()
+    private lateinit var audioPlayer: AudioPlayerController
+    private val llmEngine: LlmEngineInterface
+        get() = engineFactory.getActiveEngine() ?: llamaFallback
 
     @Inject
     lateinit var modelManager: ModelManager
@@ -101,10 +114,13 @@ class ChatFragment : Fragment() {
     private var endpointAnimating = false
     private var endpointCollapsed = false
     private var endpointOriginalWidth = 0
+    private var speechRecognizer: android.speech.SpeechRecognizer? = null
+    private var isListening = false
     companion object {
-        private const val REQUEST_SPEECH = 101
+        private const val REQUEST_MIC_PERMISSION = 102
+        private const val REQUEST_SPEECH_INPUT = 103
     }
-
+    private var micPulseAnimator: android.animation.AnimatorSet? = null
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -117,14 +133,43 @@ class ChatFragment : Fragment() {
             onNewsItemClick = { articleId, title, description ->
                 openArticleDetail(articleId, title, description)
             },
-            onRetry = { message ->
-                retryMessage(message)
+            onRetry = { message -> retryMessage(message) },
+            onEdit  = { message, newContent -> editMessageAndBranch(message, newContent) },
+            onSwitchBranch = { pivotId, delta -> switchBranch(pivotId, delta) },
+            onTts = { msgId, content, onLoadingEnd ->
+                if (viewModel.isPlaying(msgId)) return@ChatMessageAdapter
+                ttsManager.stop()
+                viewModel.addSpeaking(msgId)
+                lifecycleScope.launch {
+                    ttsManager.onAudioReadyBefore = { _, _ ->
+                        viewModel.removeSpeaking(msgId)
+                        viewModel.setPlayingId(msgId)
+                        onLoadingEnd()
+                    }
+                    ttsManager.onAudioReady = { filePath, label ->
+                        audioPlayer.playAudio(filePath, label)
+                    }
+                    ttsManager.onDone = {
+                        if (_binding != null) {
+                            binding.recyclerView.post { adapter.notifyDataSetChanged() }
+                        }
+                        viewModel.setPlayingId(null)
+                    }
+                    ttsManager.speak(content)
+                }
             },
-            onEdit = { message, newContent ->
-                editMessageAndBranch(message, newContent)
+            onStopTts = {
+                ttsManager.stop()
+                viewModel.setPlayingId(null)
             },
-            onSwitchBranch = { pivotId, delta ->
-                switchBranch(pivotId, delta)
+            onOpenTtsSettings = {
+                TtsSettingsFragment().apply {
+                    audioPlaybackListener = object : TtsSettingsFragment.AudioPlaybackListener {
+                        override fun onPlayAudio(filePath: String, label: String) {
+                            audioPlayer.playAudio(filePath, label)
+                        }
+                    }
+                }.show(parentFragmentManager, "tts_settings")
             },
         )
     }
@@ -134,7 +179,30 @@ class ChatFragment : Fragment() {
         // ── Khởi tạo adapter với callback mở chi tiết bài báo ──
 
         initAdapter()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.speakingIds.collect { ids ->
+                    Log.d("SPEAKING", "collect ids: $ids")
+                    adapter.updateSpeakingIds(ids)
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playingId.collect { id ->
+                    adapter.setPlayingId(id)
+                }
+            }
+        }
+        audioPlayer = AudioPlayerController(binding)
+        ttsManager.initGoogle()
+        ttsManager.clearTtsCache()
         AppState.currentSessionId?.let { BranchManager.init(it) }
+
+        ttsManager.onAudioReady = { filePath, label ->
+            audioPlayer.playAudio(filePath, label)
+        }
+
 
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -259,7 +327,16 @@ class ChatFragment : Fragment() {
         binding.btnModelStatus.setOnClickListener {
             showModelBottomSheet()
         }
-
+        binding.btnModelStatus.setOnLongClickListener {
+            TtsSettingsFragment().apply {
+                audioPlaybackListener = object : TtsSettingsFragment.AudioPlaybackListener {
+                    override fun onPlayAudio(filePath: String, label: String) {
+                        audioPlayer.playAudio(filePath, label)
+                    }
+                }
+            }.show(parentFragmentManager, "TtsSettings")
+            true
+        }
         // ✅ Thêm click cho toggle mode
         binding.btnToggleMode.setOnClickListener {
             toggleSendMode()
@@ -698,7 +775,18 @@ class ChatFragment : Fragment() {
             if (isGenerating) stopGeneration() else sendMessage()
         }
 
-        binding.btnMic.setOnClickListener { startVoiceInput() }
+        binding.btnMic.setOnClickListener {
+            if (isListening) {
+                stopListening()
+            } else {
+                // Visual feedback ngay lập tức
+                binding.btnMic.imageTintList = android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#FF4444")
+                )
+                binding.btnMic.animate().scaleX(1.2f).scaleY(1.2f).setDuration(150).start()
+                startVoiceInput()
+            }
+        }
 
         binding.etMessage.addTextChangedListener(object : TextWatcher {
             private var isTyping = false
@@ -1242,14 +1330,15 @@ class ChatFragment : Fragment() {
             val result = chatRepository.sendOfflineMessage(
                 sessionId = AppState.currentSessionId,
                 content = text,
+                // Trong ChatFragment.sendOffline()
                 onToken = { token ->
+                    Log.d("OFFLINE_DEBUG", "onToken called: '$token'")  // ← có log này không?
                     val cur = adapter.currentList.toMutableList()
                     val idx = cur.indexOfFirst { it.id.startsWith("streaming_") }
+                    Log.d("OFFLINE_DEBUG", "streaming bubble index: $idx, list size: ${cur.size}")
                     if (idx != -1) {
                         cur[idx] = cur[idx].copy(content = cur[idx].content + token)
                         adapter.submitList(cur.toList())
-                        AppState.streamingContent = cur[idx].content
-                        if (!userScrolledUp) scrollToBottom()  // ✅
                     }
                 },
                 branchId = currentBranchId
@@ -1543,31 +1632,172 @@ class ChatFragment : Fragment() {
             }
         })
     }
-    private fun startVoiceInput() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Nói tin nhắn của bạn...")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_MIC_PERMISSION &&
+            grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            startVoiceInput()
+        } else {
+            Toast.makeText(requireContext(), "Cần quyền microphone", Toast.LENGTH_SHORT).show()
         }
-        try {
-            startActivityForResult(intent, REQUEST_SPEECH)
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Không hỗ trợ voice input", Toast.LENGTH_SHORT).show()
+    }
+    private fun startVoiceInput() {
+        if (requireContext().checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_MIC_PERMISSION)
+            return
+        }
+
+        if (isListening) {
+            stopListening()
+            return
+        }
+
+        // Reset UI trước khi bắt đầu
+        resetMicButton()
+
+        speechRecognizer?.cancel()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+
+        // ✅ Samsung fix: tạo trên Main Looper tường minh
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            speechRecognizer = android.speech.SpeechRecognizer
+                .createSpeechRecognizer(requireContext().applicationContext)  // ← applicationContext
+
+            speechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
+                override fun onReadyForSpeech(params: android.os.Bundle?) {
+                    Log.d("MIC", "✅ onReadyForSpeech")
+                    if (!isAdded || _binding == null) return
+                    isListening = true
+                    startMicListeningUI()
+                }
+
+                override fun onBeginningOfSpeech() {
+                    Log.d("MIC", "✅ onBeginningOfSpeech")
+                }
+
+                override fun onRmsChanged(rmsdB: Float) {
+                    if (!isAdded || _binding == null || !isListening) return
+                    // Scale nhẹ trên button theo âm lượng
+                    val scale = 1f + (rmsdB.coerceIn(0f, 10f) / 10f) * 0.15f
+                    binding.btnMic.scaleX = scale
+                    binding.btnMic.scaleY = scale
+                }
+
+                override fun onEndOfSpeech() {
+                    Log.d("MIC", "✅ onEndOfSpeech")
+                    if (!isAdded || _binding == null) return
+                    isListening = false
+                    resetMicButton()  // ← reset ngay khi nói xong
+                }
+
+                override fun onError(error: Int) {
+                    Log.e("MIC", "❌ onError: $error")
+                    if (!isAdded || _binding == null) return
+                    isListening = false
+                    resetMicButton()
+                    val msg = when (error) {
+                        android.speech.SpeechRecognizer.ERROR_NO_MATCH -> "Không nhận ra, thử lại"
+                        android.speech.SpeechRecognizer.ERROR_NETWORK -> "Lỗi mạng"
+                        android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Không nghe thấy gì"
+                        android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
+                            // ✅ Busy → destroy và thử lại sau 300ms
+                            speechRecognizer?.destroy()
+                            speechRecognizer = null
+                            android.os.Handler(android.os.Looper.getMainLooper())
+                                .postDelayed({ startVoiceInput() }, 300)
+                            return
+                        }
+                        else -> "Lỗi $error"
+                    }
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onResults(results: android.os.Bundle?) {
+                    Log.d("MIC", "✅ onResults")
+                    if (!isAdded || _binding == null) return
+                    isListening = false
+                    resetMicButton()  // ← reset khi có kết quả
+
+                    val text = results
+                        ?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.getOrNull(0) ?: return
+
+                    if (text.isNotEmpty()) {
+                        val current = binding.etMessage.text.toString()
+                        val newText = if (current.isEmpty()) text else "$current $text"
+                        binding.etMessage.setText(newText)
+                        binding.etMessage.setSelection(newText.length)
+                    }
+                }
+
+                override fun onPartialResults(partialResults: android.os.Bundle?) {
+                    val partial = partialResults
+                        ?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.getOrNull(0) ?: return
+                    if (partial.isNotEmpty()) {
+                        binding.etMessage.setText(partial)
+                        binding.etMessage.setSelection(partial.length)
+                    }
+                }
+
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+            })
+
+            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "vi-VN")
+                putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                // ✅ Samsung fix quan trọng
+                putExtra(android.speech.RecognizerIntent.EXTRA_CALLING_PACKAGE,
+                    requireContext().packageName)
+            }
+
+            Log.d("MIC", "startListening...")
+            speechRecognizer?.startListening(intent)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                Log.d("MIC", "isListening state after 1s: $isListening")
+                Log.d("MIC", "speechRecognizer: $speechRecognizer")
+            }, 1000)
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_SPEECH && resultCode == android.app.Activity.RESULT_OK) {
-            val text = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.getOrNull(0) ?: return
-            if (text.isNotEmpty()) {
-                binding.etMessage.setText(text)
-                sendMessage()
-            }
-        }
+    private fun startMicListeningUI() {
+        micPulseAnimator?.cancel()
+        binding.btnMic.imageTintList = android.content.res.ColorStateList.valueOf(
+            android.graphics.Color.parseColor("#FF4444")
+        )
+        // Bỏ pulse animator, dùng wave thay thế
+        binding.micWaveView.startWave()
     }
+
+    private fun stopListening() {
+        speechRecognizer?.stopListening()
+        isListening = false
+        resetMicButton()
+    }
+
+    private fun resetMicButton() {
+        if (!isAdded || _binding == null) return
+        micPulseAnimator?.cancel()
+        micPulseAnimator = null
+        binding.micWaveView.stopWave()
+        binding.btnMic.animate()
+            .scaleX(1f).scaleY(1f).alpha(1f)
+            .setDuration(150).start()
+        binding.btnMic.setImageResource(R.drawable.ic_mic)
+        binding.btnMic.imageTintList = null
+    }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -1577,6 +1807,13 @@ class ChatFragment : Fragment() {
         realtimeJob?.cancel()
         typingJob?.cancel()
         streamingJob?.cancel()
+        micPulseAnimator?.cancel()
+        micPulseAnimator = null
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        binding.micWaveView.stopWave()
+        ttsManager.stop()          // ← thêm
+        audioPlayer.destroy()
         _binding = null
     }
 }

@@ -242,27 +242,20 @@ class HistoryDetailScreen(
                         ).build()
                     )
                     .setOnClickListener {
-                        // Fire-and-forget - không đợi kết quả
-//                        scope.launch {
-//                            try {
-//                                chatRepository.initRagSession(session.id)
-//                            } catch (e: Exception) {
-//                                // Ignore
-//                            }
-//                        }
+
 
                         // Push màn hình chat ngay lập tức
                         AppState.currentSession = session
                         chatScreen.loadSession(session.id)
-                        chatScreen.currentChatSessionScreen = null
-                        screenManager.push(
-                            ChatSessionScreen(
-                                carContext = carContext,
-                                chatScreen = chatScreen,
-                                sessionId  = session.id,
-                                endpoint   = session.endpoint   // ← lấy từ DB thay vì hardcode "news"
-                            )
+
+                        val sessionScreen = ChatSessionScreen(
+                            carContext = carContext,
+                            chatScreen = chatScreen,
+                            sessionId  = session.id,
+                            endpoint   = session.endpoint
                         )
+                        chatScreen.currentChatSessionScreen = sessionScreen
+                        screenManager.push(sessionScreen)
                     }
                     .build()
             )

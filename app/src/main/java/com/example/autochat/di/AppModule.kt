@@ -18,7 +18,12 @@ import com.example.autochat.domain.repository.ChatRepository
 import com.example.autochat.domain.repository.ChatRepositoryImpl
 import com.example.autochat.domain.repository.GeminiKeyRepository
 import com.example.autochat.domain.repository.GeminiKeyRepositoryImpl
+import com.example.autochat.llm.LlmEngine
+import com.example.autochat.llm.LlmEngineInterface
 import com.example.autochat.remote.api.Judge0Api
+import com.example.autochat.token.TokenAuthenticator
+import com.example.autochat.tts.TTSManager
+import com.example.autochat.ui.phone.adapter.com.example.autochat.token.EncryptedTokenStorage
 import com.example.autochat.websocket.WebSocketManager
 import dagger.Module
 import dagger.Provides
@@ -64,10 +69,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(): OkHttpClient = OkHttpClient.Builder()
+    fun provideOkHttp(tokenAuthenticator: TokenAuthenticator ): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })
+        .authenticator(tokenAuthenticator)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
@@ -76,18 +82,11 @@ object AppModule {
     @Provides
     @Singleton
     @Named("chat")
-    fun provideChatRetrofit(): Retrofit {
-        val client = OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(3, TimeUnit.MINUTES)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
-
+    fun provideChatRetrofit(
+        client: OkHttpClient  // ← inject vào
+    ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.1.15:8001/")
+            .baseUrl("http://192.168.1.118:8001/")
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -97,7 +96,7 @@ object AppModule {
     @Singleton
     @Named("rag")
     fun provideRagRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
-        .baseUrl("http://192.168.1.15:8000/")
+        .baseUrl("http://192.168.1.118:8000/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -157,4 +156,41 @@ object AppModule {
     @Singleton
     fun provideJudge0Api(@Named("judge0") retrofit: Retrofit): Judge0Api =
         retrofit.create(Judge0Api::class.java)
+    @Provides
+    @Singleton
+    @Named("ttsBaseUrl")
+    fun provideTtsBaseUrl(): String = "http://192.168.118:8001"
+    @Provides
+    @Singleton
+    fun provideLlmEngineInterface(engine: LlmEngine): LlmEngineInterface = engine
+
+    // Thêm provider này
+    @Provides
+    @Singleton
+    @Named("ttsOkHttpClient")
+    fun provideTtsOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        .callTimeout(0, TimeUnit.SECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.MINUTES)   // ← 3 phút cho TTS inference
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
+
+    // Sửa provideTtsManager — inject client riêng
+    @Provides
+    @Singleton
+    fun provideTtsManager(
+        @ApplicationContext context: Context,
+        @Named("ttsOkHttpClient") client: OkHttpClient,  // ← đổi ở đây
+        @Named("ttsBaseUrl") baseUrl: String,
+    ): TTSManager = TTSManager(context, client, baseUrl)
+
+    @Provides
+    @Singleton
+    fun provideEncryptedTokenStorage(
+        @ApplicationContext ctx: Context
+    ): EncryptedTokenStorage = EncryptedTokenStorage(ctx)
+
 }

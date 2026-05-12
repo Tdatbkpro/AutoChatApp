@@ -58,7 +58,22 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+    // TtsViewModel.kt hoặc thêm vào ChatViewModel
+    private val _speakingIds = MutableStateFlow<Set<String>>(emptySet())
+    val speakingIds: StateFlow<Set<String>> = _speakingIds
+    private val _playingId = MutableStateFlow<String?>(null)
+    val playingId: StateFlow<String?> = _playingId
 
+
+    fun setPlayingId(id: String?) { _playingId.value = id }
+    fun isPlaying(msgId: String): Boolean = _playingId.value == msgId
+    fun addSpeaking(id: String) {
+        _speakingIds.value = _speakingIds.value + id
+    }
+
+    fun removeSpeaking(id: String) {
+        _speakingIds.value = _speakingIds.value - id
+    }
     fun sendMessage(content: String) {
         if (content.isBlank()) return
         viewModelScope.launch {

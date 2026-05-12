@@ -13,6 +13,7 @@ import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -28,6 +29,8 @@ import com.example.autochat.domain.repository.HasCodeExecutor
 import com.example.autochat.ui.phone.BranchManager
 import com.example.autochat.ui.phone.MarkdownRenderer
 import com.example.autochat.ui.phone.MessageActionsPopup
+import com.example.autochat.ui.phone.adapter.com.example.autochat.tts.TtsTextCleaner
+import com.example.autochat.ui.phone.fragment.TtsSettingsFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import io.noties.markwon.Markwon
 import java.text.SimpleDateFormat
@@ -45,6 +48,9 @@ class ChatMessageAdapter(
     private val onRetry:        (Message) -> Unit                  = {},
     private val onEdit:         (Message, String) -> Unit          = { _, _ -> },
     private val onSwitchBranch: (pivotId: String, delta: Int) -> Unit = { _, _ -> },
+    private val onTts: (msgId: String, content: String, onLoadingEnd: () -> Unit) -> Unit = { _, _, _ -> } ,
+            private val onStopTts: () -> Unit = {},                    // ← thêm
+    private val onOpenTtsSettings: () -> Unit = {},            // ← thêm
 ) : ListAdapter<Message, RecyclerView.ViewHolder>(DiffCallback()) {
 
     data class NewsItemData(
@@ -95,14 +101,30 @@ class ChatMessageAdapter(
         }
 
         fun formatTime(timestamp: Long): String = try {
-            SimpleDateFormat("HH:mm", Locale("vi")).format(Date(timestamp))
+            val now = Date()
+            val date = Date(timestamp)
+            val calNow = java.util.Calendar.getInstance().apply { time = now }
+            val calMsg = java.util.Calendar.getInstance().apply { time = date }
+
+            val sameDay  = calNow.get(java.util.Calendar.YEAR) == calMsg.get(java.util.Calendar.YEAR) &&
+                    calNow.get(java.util.Calendar.DAY_OF_YEAR) == calMsg.get(java.util.Calendar.DAY_OF_YEAR)
+            val sameYear = calNow.get(java.util.Calendar.YEAR) == calMsg.get(java.util.Calendar.YEAR)
+
+            val fmt = when {
+                sameDay  -> "HH:mm"
+                sameYear -> "dd/MM HH:mm"
+                else     -> "dd/MM/yyyy HH:mm"
+            }
+            SimpleDateFormat(fmt, Locale("vi")).format(date)
         } catch (e: Exception) { "--:--" }
     }
 
     private var onUserMessageLongPress: ((Int) -> Unit)? = null
     private var markwon: Markwon? = null
     private var renderer: MarkdownRenderer? = null
-
+    // Thêm vào class ChatMessageAdapter (ngoài các ViewHolder)
+    private val speakingIds: MutableSet<String> = mutableSetOf()
+    private var currentPlayingId: String? = null
     private fun getOrCreateMarkwon(context: Context): Markwon {
         return markwon ?: run {
             ru.noties.jlatexmath.JLatexMathAndroid.init(context.applicationContext)
@@ -123,6 +145,7 @@ class ChatMessageAdapter(
                         "swift"                 -> io.noties.prism4j.languages.Prism_swift.create(prism4j)
                         "go"                    -> io.noties.prism4j.languages.Prism_go.create(prism4j)
                         "yaml"                  -> io.noties.prism4j.languages.Prism_yaml.create(prism4j)
+                        "csharp"                  -> io.noties.prism4j.languages.Prism_csharp.create(prism4j)
                         else                    -> null
                     }
                 }
@@ -175,25 +198,34 @@ class ChatMessageAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return when (viewType) {
-            VIEW_TYPE_USER -> UserViewHolder(
-                binding        = ItemMessageUserBinding.inflate(inflater, parent, false),
-                onLongPress    = onUserMessageLongPress,
-                onEdit         = onEdit,
-                onSwitchBranch = onSwitchBranch,
-            )
-            VIEW_TYPE_BOT_NEWS -> BotNewsViewHolder(
-                ItemMessageBotNewsBinding.inflate(inflater, parent, false),
-                onNewsItemClick
-            )
-            else -> BotViewHolder(
-                ItemMessageBotBinding.inflate(inflater, parent, false),
-                getOrCreateRenderer(parent.context),
-                onRetry
-            )
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = when (viewType) {
+        VIEW_TYPE_BOT_NEWS -> BotNewsViewHolder(
+            binding         = ItemMessageBotNewsBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+            renderer        = getOrCreateRenderer(parent.context),
+            onNewsItemClick = onNewsItemClick,
+            onRetry         = onRetry,
+            onTts           = onTts,
+            onStopTts       = onStopTts,
+            onOpenTtsSettings = onOpenTtsSettings,
+            speakingIds     = speakingIds,
+            playingIdProvider = { currentPlayingId },
+        )
+        VIEW_TYPE_USER -> UserViewHolder(
+            binding        = ItemMessageUserBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+            onLongPress    = onUserMessageLongPress,
+            onEdit         = onEdit,
+            onSwitchBranch = onSwitchBranch,
+        )
+        else -> BotViewHolder(
+            binding           = ItemMessageBotBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+            renderer          = getOrCreateRenderer(parent.context),
+            onRetry           = onRetry,
+            onTts             = onTts,
+            onStopTts         = onStopTts,
+            onOpenTtsSettings = onOpenTtsSettings,
+            speakingIds       = speakingIds,
+            playingIdProvider = { currentPlayingId },
+        )
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -204,7 +236,10 @@ class ChatMessageAdapter(
                 val userMsg = if (position > 0) getItem(position - 1) else null
                 holder.bind(getItem(position), userMsg)
             }
-            is BotNewsViewHolder -> holder.bind(getItem(position))
+            is BotNewsViewHolder -> {
+                val userMsg = if (position > 0) getItem(position - 1) else null
+                holder.bind(getItem(position), userMsg)   // ✅ truyền userMsg
+            }
         }
     }
 
@@ -359,11 +394,16 @@ class ChatMessageAdapter(
         private val binding: ItemMessageBotBinding,
         private val renderer: MarkdownRenderer,
         private val onRetry: ((Message) -> Unit)? = null,
-        ) : RecyclerView.ViewHolder(binding.root) {
-
-        private var textToSpeech: android.speech.tts.TextToSpeech? = null
+        private val onTts: (msgId: String, content: String, onLoadingEnd: () -> Unit) -> Unit = { _, _, _ -> },
+        private val onStopTts: () -> Unit = {},
+        private val onOpenTtsSettings: () -> Unit = {},
+        private val speakingIds: MutableSet<String>,
+        private val playingIdProvider: () -> String?,
+    ) : RecyclerView.ViewHolder(binding.root) {
+        private var isSpeaking = false
         private var currentClean: String = ""
         private var boundMessageId: String = ""
+
 
         fun updateContent(content: String) {
             if (content.isEmpty()) return
@@ -376,7 +416,9 @@ class ChatMessageAdapter(
             binding.contentContainer.visibility = View.VISIBLE
             binding.divider.visibility          = View.VISIBLE
             binding.actionButtons.visibility    = View.VISIBLE
-            binding.btnStop.visibility          = View.GONE
+            isSpeaking = false
+            binding.btnStop.visibility  = View.GONE
+            binding.btnSpeak.visibility = View.VISIBLE
             renderer.renderStreaming(binding.contentContainer, currentClean)
         }
 
@@ -392,6 +434,8 @@ class ChatMessageAdapter(
                     onRetry?.invoke(userMessage)  // ✅ truyền user message
                 }
             }
+            val isLoading  = speakingIds.contains(msg.id)
+            val isPlaying  = playingIdProvider() == msg.id
             binding.btnRetry.visibility = if (
                 msg.content.isEmpty() || userMessage == null || userMessage.sender != "user"
             ) View.GONE else View.VISIBLE
@@ -401,6 +445,11 @@ class ChatMessageAdapter(
                 binding.contentContainer.visibility = View.GONE
                 binding.divider.visibility          = View.GONE
                 binding.actionButtons.visibility    = View.GONE
+                val isLoading = speakingIds.contains(msg.id)
+                binding.ivSpeakIcon.visibility    = if (isLoading || isPlaying) View.GONE else View.VISIBLE
+                binding.pbSpeakLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
+                binding.btnStop.visibility        = if (isPlaying) View.VISIBLE else View.GONE
+                binding.btnSpeak.isClickable      = !isLoading && !isPlaying
             } else {
                 currentClean = msg.content.replace(
                     Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), ""
@@ -411,6 +460,12 @@ class ChatMessageAdapter(
                 binding.divider.visibility          = View.VISIBLE
                 binding.actionButtons.visibility    = View.VISIBLE
                 binding.btnStop.visibility          = View.GONE
+                val isLoading = speakingIds.contains(msg.id)
+                Log.d("SPEAKING", "bind msgId=${msg.id}, isLoading=$isLoading, speakingIds=$speakingIds")
+                binding.ivSpeakIcon.visibility    = if (isLoading || isPlaying) View.GONE else View.VISIBLE
+                binding.pbSpeakLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
+                binding.btnStop.visibility        = if (isPlaying) View.VISIBLE else View.GONE
+                binding.btnSpeak.isClickable      = !isLoading && !isPlaying
 
                 renderer.render(binding.contentContainer, currentClean)
 
@@ -425,26 +480,23 @@ class ChatMessageAdapter(
                 }
 
                 binding.btnSpeak.setOnClickListener {
-                    binding.btnSpeak.visibility = View.GONE
-                    binding.btnStop.visibility  = View.VISIBLE
-                    textToSpeech = android.speech.tts.TextToSpeech(itemView.context) { status ->
-                        if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                            textToSpeech?.setLanguage(java.util.Locale("vi"))
-                            textToSpeech?.speak(
-                                currentClean,
-                                android.speech.tts.TextToSpeech.QUEUE_FLUSH,
-                                null, null
-                            )
-                        }
+                    if (speakingIds.contains(msg.id) || playingIdProvider() == msg.id) return@setOnClickListener
+                    speakingIds.add(msg.id)
+                    binding.ivSpeakIcon.visibility    = View.GONE
+                    binding.pbSpeakLoading.visibility = View.VISIBLE
+                    binding.btnSpeak.isClickable      = false
+                    onTts(msg.id, TtsTextCleaner.clean(currentClean)) {
+                        speakingIds.remove(msg.id)
+                        binding.ivSpeakIcon.visibility    = View.GONE  // btnStop sẽ hiện thay
+                        binding.pbSpeakLoading.visibility = View.GONE
                     }
                 }
-
+                binding.btnSpeak.setOnLongClickListener {
+                    onOpenTtsSettings()
+                    true
+                }
                 binding.btnStop.setOnClickListener {
-                    textToSpeech?.stop()
-                    textToSpeech?.shutdown()
-                    textToSpeech       = null
-                    binding.btnStop.visibility  = View.GONE
-                    binding.btnSpeak.visibility = View.VISIBLE
+                    onStopTts()
                 }
 
                 binding.btnExpand.setOnClickListener {
@@ -481,30 +533,195 @@ class ChatMessageAdapter(
             dialog.show()
         }
     }
-
+    fun setPlayingId(id: String?) {                            // ← thêm
+        currentPlayingId = id
+        notifyDataSetChanged()
+    }
     // ── BotNewsViewHolder (giữ nguyên) ────────────────────────────────────────
-
+    fun updateSpeakingIds(ids: Set<String>) {
+        speakingIds.clear()
+        speakingIds.addAll(ids)
+        notifyDataSetChanged()
+    }
     class BotNewsViewHolder(
         private val binding: ItemMessageBotNewsBinding,
-        private val onNewsItemClick: (articleId: Int?, title: String, description: String) -> Unit
+        private val renderer: MarkdownRenderer,
+        private val onNewsItemClick: (articleId: Int?, title: String, description: String) -> Unit,
+        private val onRetry: (Message) -> Unit = {},
+        private val onTts: (msgId: String, content: String, onLoadingEnd: () -> Unit) -> Unit = { _, _, _ -> },
+        private val onStopTts: () -> Unit = {},
+        private val onOpenTtsSettings: () -> Unit = {},
+        private val playingIdProvider: () -> String?,
+        private val speakingIds: MutableSet<String>,
+
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private var isExpanded = false
-
-        fun bind(msg: Message) {
+        private var currentClean: String = ""
+        fun bind(msg: Message, userMessage: Message?) {
             val newsItems = extractNewsItems(msg)
-            binding.tvContent.text  = msg.content
-            binding.tvTime.text     = formatTime(msg.timestamp)
+            binding.contentContainer.removeAllViews()
+
+            currentClean = msg.content.replace(
+                Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), ""
+            ).trim()
+            renderer.render(binding.contentContainer, currentClean)
+            binding.tvTime.text = formatTime(msg.timestamp)
             binding.tvNewsCount.text = "📰 ${newsItems.size} bài liên quan • nhấn để xem"
+            binding.divider.visibility       = View.VISIBLE
+            binding.actionButtons.visibility = View.VISIBLE
+            binding.btnStop.visibility       = View.GONE
+
+            binding.btnRetry.visibility = if (userMessage?.sender == "user") View.VISIBLE else View.GONE
+            binding.btnRetry.setOnClickListener { userMessage?.let { onRetry(it) } }
+
+            binding.btnCopy.setOnClickListener {
+                val cb = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cb.setPrimaryClip(ClipData.newPlainText("message", msg.content))
+                Toast.makeText(itemView.context, "✅ Đã sao chép", Toast.LENGTH_SHORT).show()
+            }
+
+            // ── Render spinner state khi recycle ──────────────────────────────────
+            val isLoading  = speakingIds.contains(msg.id)
+            val isPlaying  = playingIdProvider() == msg.id
+
+            binding.ivSpeakIcon.visibility    = if (isLoading || isPlaying) View.GONE else View.VISIBLE
+            binding.pbSpeakLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.btnStop.visibility        = if (isPlaying) View.VISIBLE else View.GONE
+            binding.btnSpeak.isClickable      = !isLoading && !isPlaying
+
+            binding.btnSpeak.setOnClickListener {
+                if (speakingIds.contains(msg.id) || playingIdProvider() == msg.id) return@setOnClickListener
+                speakingIds.add(msg.id)
+                binding.ivSpeakIcon.visibility    = View.GONE
+                binding.pbSpeakLoading.visibility = View.VISIBLE
+                binding.btnSpeak.isClickable      = false
+                onTts(msg.id, TtsTextCleaner.clean(currentClean)) {
+                    speakingIds.remove(msg.id)
+                    binding.ivSpeakIcon.visibility    = View.GONE  // btnStop sẽ hiện thay
+                    binding.pbSpeakLoading.visibility = View.GONE
+                }
+            }
+
+            binding.btnStop.setOnClickListener {
+                speakingIds.remove(msg.id)
+                binding.btnStop.visibility        = View.GONE
+                binding.btnSpeak.visibility       = View.VISIBLE
+                binding.ivSpeakIcon.visibility    = View.VISIBLE
+                binding.pbSpeakLoading.visibility = View.GONE
+                binding.btnSpeak.isClickable      = true
+            }
+
+            binding.btnExpand.setOnClickListener {
+                showFullResponseSheet(itemView.context, msg.content, currentClean, newsItems)
+            }
+            binding.btnSpeak.setOnLongClickListener {
+                onOpenTtsSettings()
+                true
+            }
+
+            binding.btnStop.setOnClickListener {
+                onStopTts()
+            }
 
             isExpanded = false
             binding.newsListContainer.visibility = View.GONE
             binding.btnToggleNews.text = "Xem danh sách ▼"
-
             binding.btnToggleNews.setOnClickListener { toggle(newsItems) }
             binding.tvNewsCount.setOnClickListener   { toggle(newsItems) }
         }
+        private fun showFullResponseSheet(
+            context: Context,
+            rawContent: String,
+            cleanContent: String,
+            newsItems: List<NewsItemData>   // ✅ thêm param
+        ) {
+            val dialog = BottomSheetDialog(context, R.style.BottomSheetGitHubTheme)
+            val sheetView = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_response, null)
 
+            // Render markdown content
+            val container = sheetView.findViewById<LinearLayout>(R.id.expandedContentContainer)
+            renderer.render(container, cleanContent)
+
+            // ✅ Thêm news list vào cuối expandedContentContainer
+            if (newsItems.isNotEmpty()) {
+                // Divider
+                val divider = View(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1
+                    ).also { it.setMargins(0, 16, 0, 12) }
+                    setBackgroundColor(0x20FFFFFF)
+                }
+                container.addView(divider)
+
+                // Badge
+                val badge = TextView(context).apply {
+                    text = "📰 ${newsItems.size} bài liên quan"
+                    textSize = 13f
+                    setTextColor(0xFF90CAF9.toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.bottomMargin = 8 }
+                }
+                container.addView(badge)
+
+                // Inflate từng item_news_row
+                newsItems.forEach { item ->
+                    val rowView = LayoutInflater.from(context)
+                        .inflate(R.layout.item_news_row, container, false)
+
+                    rowView.findViewById<TextView>(R.id.tvNewsTitle)?.text =
+                        "${item.number}. ${item.title}"
+                    rowView.findViewById<TextView>(R.id.tvNewsDesc)?.text =
+                        item.description.take(120) + if (item.description.length > 120) "..." else ""
+
+                    val tvCategory = rowView.findViewById<TextView>(R.id.tvNewsCategory)
+                    if (!item.category.isNullOrBlank()) {
+                        tvCategory?.text = item.category
+                        tvCategory?.visibility = View.VISIBLE
+                    } else {
+                        tvCategory?.visibility = View.GONE
+                    }
+
+                    val ivThumb = rowView.findViewById<ImageView>(R.id.ivThumbnail)
+                    val ivPlay  = rowView.findViewById<ImageView>(R.id.ivPlayIcon)
+                    if (!item.thumbnail.isNullOrBlank()) {
+                        ivThumb?.visibility = View.VISIBLE
+                        com.bumptech.glide.Glide.with(context)
+                            .load(item.thumbnail).centerCrop().into(ivThumb!!)
+                        ivPlay?.visibility = if (item.mediaType == "video") View.VISIBLE else View.GONE
+                    } else {
+                        ivThumb?.visibility = View.GONE
+                        ivPlay?.visibility  = View.GONE
+                    }
+
+                    rowView.setOnClickListener {
+                        dialog.dismiss()   // ✅ đóng sheet rồi mới navigate
+                        onNewsItemClick(item.articleId, item.title, item.description)
+                    }
+                    container.addView(rowView)
+                }
+            }
+
+            // Copy all
+            val tvCopyAllLabel = sheetView.findViewById<TextView>(R.id.tvCopyAllLabel)
+            sheetView.findViewById<LinearLayout>(R.id.btnCopyAll).setOnClickListener {
+                val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cb.setPrimaryClip(ClipData.newPlainText("response", rawContent))
+                tvCopyAllLabel.text = "Copied!"
+                tvCopyAllLabel.setTextColor(0xFF3FB950.toInt())
+                it.postDelayed({
+                    tvCopyAllLabel.text = "Copy all"
+                    tvCopyAllLabel.setTextColor(0xFF8B949E.toInt())
+                }, 2000)
+            }
+
+            dialog.setContentView(sheetView)
+            dialog.behavior.state         = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            dialog.behavior.skipCollapsed = true
+            dialog.show()
+        }
         private fun toggle(newsItems: List<NewsItemData>) {
             isExpanded = !isExpanded
             if (isExpanded) {

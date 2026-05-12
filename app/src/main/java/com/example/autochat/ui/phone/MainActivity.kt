@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        supportActionBar?.hide()
         // Cho phép vuốt ở bất cứ đâu
         setupFullScreenSwipe()
 
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnSettings.setOnClickListener {
             closeDrawer()
-            navigateToProfile()
+            navigateToSetting()
         }
     }
 
@@ -319,9 +319,9 @@ class MainActivity : AppCompatActivity() {
         }, 300)
     }
 
-    private fun navigateToProfile() {
+    private fun navigateToSetting() {
         val navHost = supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
-        navHost.navController.navigate(R.id.profileFragment)
+        navHost.navController.navigate(R.id.settingFragment)
     }
 
     fun openDrawer() {

@@ -1,6 +1,7 @@
 package com.example.autochat
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,8 @@ class AutoChatApplication : Application(), HasCodeExecutor
         get() = _codeExecutor
 
     override fun onCreate() {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+
         super.onCreate()
         CoroutineScope(Dispatchers.IO).launch {
             try {

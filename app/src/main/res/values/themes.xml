@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  res/values/themes.xml                                          ║
+    ║                                                                 ║
+    ║  AppTheme — LIGHT (default / day mode)                          ║
+    ║  Android load file này khi device ở Light Mode.                 ║
+    ║  values-night/themes.xml sẽ override khi Dark Mode.             ║
+    ║                                                                 ║
+    ║  Manifest dùng: android:theme="@style/AppTheme"                 ║
+    ╚══════════════════════════════════════════════════════════════════╝
+-->
 <resources>
+
+    <!-- ════════════════════════════════════════════════════════════
+         Theme trong suốt — dùng cho VoiceActivity (overlay)
+         ════════════════════════════════════════════════════════════ -->
     <style name="Theme.AutoChat" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -8,15 +23,173 @@
         <item name="android:backgroundDimEnabled">false</item>
     </style>
 
+    <!-- ════════════════════════════════════════════════════════════
+         AppTheme — LIGHT (toàn bộ attr đầy đủ, mirror dark)
+         ════════════════════════════════════════════════════════════ -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- ── Material3 system colors — LIGHT ── -->
+        <item name="colorPrimary">@color/brand_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/light_bg_elevated</item>
+        <item name="colorOnPrimaryContainer">@color/brand_purple_dark</item>
+        <item name="colorSecondary">@color/teal_primary</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSurface">@color/light_bg_surface</item>
+        <item name="colorOnSurface">@color/light_text_primary</item>
+        <item name="colorSurfaceVariant">@color/light_bg_card</item>
+        <item name="android:colorBackground">@color/light_bg_app</item>
+        <item name="colorOnBackground">@color/light_text_primary</item>
+        <item name="colorError">@color/status_red</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/light_bg_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- ── bg attrs — LIGHT ── -->
+        <item name="bgApp">@color/light_bg_app</item>
+        <item name="bgSurface">@color/light_bg_surface</item>
+        <item name="bgCard">@color/light_bg_card</item>
+        <item name="bgElevated">@color/light_bg_elevated</item>
+        <item name="bgBottomSheet">@color/light_bg_card</item>
+        <item name="bgScrim">@color/light_scrim</item>
+        <item name="bgInput">@color/light_input_box</item>
+        <item name="bgEditField">@color/light_bg_card</item>
+        <item name="bgChip">@color/light_chip_fill</item>
+        <item name="bgButton">@color/brand_purple</item>
+        <item name="bgButtonGhost">@color/light_button_ghost</item>
+        <item name="bgAvatar">@color/brand_purple</item>
+        <item name="bgBadge">@color/light_bg_elevated</item>
+        <item name="bgCodeBlock">@color/light_bg_code</item>
+        <item name="bgCodeAction">@color/light_bg_surface</item>
+        <item name="bgDialog">@color/light_bg_card</item>
+        <item name="bgEndpointPill">@color/light_bg_elevated</item>
+        <item name="bgEndpointPillPressed">@color/light_bg_surface</item>
+        <item name="bgCircle">@color/light_bg_elevated</item>
+        <item name="bgCircleDark">@color/light_bg_surface</item>
+        <item name="bgCircleBlue">@color/light_circle_blue</item>
+        <item name="bgCircleRed">@color/danger_red</item>
+        <item name="bgDescriptionBar">@color/light_bg_elevated</item>
+        <item name="bgDrawerHeader">@color/light_bg_elevated</item>
+        <item name="bgDrawerHeaderEnd">@color/light_bg_surface</item>
+        <item name="bgGhBtn">@color/light_bg_card</item>
+        <item name="bgGhBtnPressed">@color/light_chip_fill</item>
+        <item name="bgErrorSurface">@color/light_bg_elevated</item>
+        <item name="bgDanger">@color/danger_bg_light</item>
+
+        <!-- ── Chat bubble attrs — LIGHT ── -->
+        <item name="bgBubbleAi">@color/light_bg_ai_bubble</item>
+        <item name="bgBubbleUser">@color/brand_purple</item>
+        <item name="strokeBubbleAi">@color/light_stroke_blue</item>
+        <item name="textBubbleAiLabel">@color/light_text_ai_label</item>
+        <item name="textBubbleAiBody">@color/light_text_primary</item>
+        <item name="textBubbleUser">@color/white</item>
+
+        <!-- ── Stroke attrs — LIGHT ── -->
+        <item name="strokeDefault">@color/light_stroke</item>
+        <item name="strokeBlue">@color/light_stroke_blue</item>
+        <item name="strokeBlue2">@color/light_stroke_blue2</item>
+        <item name="strokeChip">@color/light_chip_stroke</item>
+        <item name="strokeInput">@color/light_input_stroke</item>
+        <item name="strokeInputFocused">@color/brand_purple</item>
+        <item name="strokeAvatar">@color/brand_purple</item>
+        <item name="strokeCode">@color/light_stroke</item>
+        <item name="strokeDialog">@color/light_stroke</item>
+        <item name="strokeEditField">@color/brand_purple</item>
+        <item name="strokeEndpointPill">@color/light_stroke_blue</item>
+        <item name="strokeGhBtn">@color/light_stroke</item>
+        <item name="strokeGhBtnPressed">@color/accent_blue</item>
+        <item name="strokeError">@color/status_red</item>
+        <item name="strokeCircle">@color/light_stroke</item>
+        <item name="strokeDanger">@color/danger_stroke_light</item>
+
+        <!-- ── Text attrs — LIGHT ── -->
+        <item name="textPrimary">@color/light_text_primary</item>
+        <item name="textSecondary">@color/light_text_secondary</item>
+        <item name="textHint">@color/light_text_secondary</item>
+        <item name="textHint2">@color/light_text_hint</item>
+        <item name="textPin">@color/accent_blue</item>
+
+        <!-- ── Icon attrs — LIGHT ── -->
+        <item name="iconColor">@color/light_icon_primary</item>
+        <item name="iconColorPrimary">@color/light_icon_primary</item>
+        <item name="iconColorSecondary">@color/light_icon_secondary</item>
+        <item name="iconColorDisabled">@color/light_icon_disabled</item>
+        <item name="iconColorActive">@color/brand_purple</item>
+        <item name="iconColorBrand">@color/brand_purple</item>
+        <item name="iconColorDanger">@color/danger_red</item>
+        <item name="iconColorSuccess">@color/status_green</item>
+        <item name="iconColorOnBrand">@color/white</item>
+
+        <!-- ── Interactive — LIGHT ── -->
+        <item name="rippleColor">@color/light_ripple</item>
+        <item name="colorBrand">@color/brand_purple</item>
+        <item name="colorBrandSoft">@color/brand_purple_light</item>
+        <item name="colorDestructive">@color/status_red</item>
+        <item name="colorDanger">@color/danger_red</item>
+        <item name="dividerColor">@color/light_divider</item>
+        <item name="colorSuccess">@color/status_green</item>
+        <item name="colorWarning">@color/status_yellow</item>
+        <item name="colorInfo">@color/accent_blue</item>
+
+        <!-- ── TTS / Engine — LIGHT ── -->
+        <item name="bgEngineCard">@color/light_engine_card</item>
+        <item name="bgEngineCardActive">@color/light_engine_card_active</item>
+        <item name="strokeEngineCard">@color/light_engine_card_stroke</item>
+        <item name="strokeEngineActive">@color/teal_primary</item>
+        <item name="textEngineActive">@color/teal_dark</item>
+        <item name="bgTabContainer">@color/light_tab_container</item>
+        <item name="bgTabActive">@color/light_tab_active</item>
+        <item name="bgBadgeTeal">@color/light_engine_card_active</item>
+        <item name="strokeBadgeTeal">@color/teal_light</item>
+        <item name="colorTeal">@color/teal_primary</item>
+        <item name="colorTealDark">@color/teal_dark</item>
+
+        <!-- ── Player bar — LIGHT ── -->
+        <item name="colorPlayerBar">@color/light_player_bar</item>
+        <item name="colorPlayerBarBorder">@color/light_stroke</item>
+        <item name="colorPlayButtonStart">@color/brand_purple</item>
+        <item name="colorPlayButtonEnd">@color/teal_primary</item>
+        <item name="colorPlayerText">@color/light_player_text</item>
+        <item name="colorPlayerChipBg">@color/light_bg_elevated</item>
+
+        <!-- ── Settings — LIGHT ── -->
+        <item name="bgSettingHeader">@color/light_setting_header</item>
+        <item name="bgSettingItem">@color/light_setting_item</item>
+        <item name="bgSettingSection">@color/light_setting_section</item>
+
+        <!-- ── Child theme refs ── -->
+        <item name="bottomSheetDialogTheme">@style/BottomSheetTheme</item>
+        <item name="android:dialogTheme">@style/DialogTheme</item>
+        <item name="bgDangerSurface">@color/danger_bg_light</item>
+        <item name="textDanger">@color/status_red</item>
+    </style>
+
+    <!-- ════════════════════════════════════════════════════════════
+         Theme.AutoChat.Main — alias trỏ về AppTheme
+         Giữ lại để Manifest cũ không bị crash trong khi migrate.
+         TODO: đổi android:theme trong Manifest thành @style/AppTheme
+               rồi xoá alias này.
+         ════════════════════════════════════════════════════════════ -->
+    <style name="Theme.AutoChat.Main" parent="AppTheme"/>
+
+    <!-- ════════════════════════════════════════════════════════════
+         Typography helpers (CollapsingToolbarLayout)
+         ════════════════════════════════════════════════════════════ -->
     <style name="ExpandedTitle" parent="TextAppearance.Material3.HeadlineMedium">
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:textSize">28sp</item>
     </style>
 
     <style name="CollapsedTitle" parent="TextAppearance.Material3.TitleLarge">
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:textSize">20sp</item>
     </style>
+
+    <!-- ════════════════════════════════════════════════════════════
+         BottomSheet / Dialog themes (dùng chung cả light & dark,
+         màu thực tế lấy qua ?attr/ nên tự đổi theo theme)
+         ════════════════════════════════════════════════════════════ -->
     <style name="BottomSheetRunCodeTheme" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="android:windowIsFloating">false</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -31,5 +204,10 @@
 
     <style name="BottomSheetRunCodeStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+    <style name="BottomSheetGitHubTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="bottomSheetStyle">@style/BottomSheetModalStyle</item>
     </style>
 </resources>

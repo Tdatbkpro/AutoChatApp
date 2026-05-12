@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none"
+    android:background="?attr/bgApp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:gravity="center_horizontal">
+
+        <!-- Back button -->
+        <ImageButton
+            android:id="@+id/btnBack"
+            style="@style/ImageButton"
+            android:layout_gravity="center_vertical|start"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/back"
+            android:padding="8dp"
+            app:tint="?attr/textPrimary" />
+
+        <!-- Icon -->
+        <TextView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="✉️"
+            android:textSize="40sp"
+            android:gravity="center"
+            android:background="@drawable/bg_icon_circle"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quên mật khẩu"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="?attr/textPrimary"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập email để nhận mã xác thực\nđặt lại mật khẩu"
+            android:textSize="14sp"
+            android:textColor="?attr/textSecondary"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:layout_marginBottom="36dp"/>
+
+        <!-- Email field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilEmail"
+            style="@style/AuthTextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_email"
+            android:layout_marginBottom="24dp"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="?attr/colorBrand">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textEmailAddress"
+                android:imeOptions="actionDone"
+                android:textColor="?attr/textPrimary"
+                android:paddingStart="8dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Error -->
+        <TextView
+            android:id="@+id/tvError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorDanger"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:visibility="gone"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_error"/>
+
+        <!-- Send button -->
+        <Button
+            android:id="@+id/btnSend"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Gửi mã xác thực"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/iconColorOnBrand"
+            android:backgroundTint="?attr/colorBrand"
+            android:stateListAnimator="@null"
+            app:cornerRadius="12dp"/>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            android:indeterminateTint="?attr/colorBrand"/>
+
+    </LinearLayout>
+</ScrollView>

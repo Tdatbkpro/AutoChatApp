@@ -11,5 +11,16 @@ interface AuthRepository {
     suspend fun generatePin(): String        // Phone tạo PIN
     suspend fun verifyPin(pin: String): User // Xe nhập PIN
     suspend fun refreshTokenIfNeeded()
+    suspend fun refreshCarTokenIfNeeded()
 
+    suspend fun sendOtp(email: String, purpose: String)
+    suspend fun verifyOtp(email: String, purpose: String, otp: String) : VerifyOtpResult
+    suspend fun resetPassword(email: String, resetToken : String, newPassword: String)
+    suspend fun loginWithGoogle(idToken: String): User
+
+}
+
+sealed class VerifyOtpResult {
+    data class Success(val resetToken: String? = null) : VerifyOtpResult()
+    data class Error(val message: String) : VerifyOtpResult()
 }

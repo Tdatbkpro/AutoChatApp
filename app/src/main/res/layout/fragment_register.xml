@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none"
+    android:background="?attr/bgApp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:gravity="center_horizontal">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            style="@style/ImageButton"
+            android:src="@drawable/ic_arrow_back"
+            android:layout_gravity="start"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/back"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tạo tài khoản"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="?attr/textPrimary"
+            android:layout_gravity="start"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Điền thông tin để bắt đầu"
+            android:textSize="14sp"
+            android:textColor="?attr/textSecondary"
+            android:layout_gravity="start"
+            android:layout_marginBottom="32dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilUsername"
+            style="@style/AuthTextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_display_name"
+            android:layout_marginBottom="16dp"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="?attr/colorBrand">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etUsername"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"
+                android:textColor="?attr/textPrimary"
+                android:paddingStart="8dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilEmail"
+            style="@style/AuthTextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_email"
+            android:layout_marginBottom="16dp"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="?attr/colorBrand">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textEmailAddress"
+                android:textColor="?attr/textPrimary"
+                android:paddingStart="8dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPassword"
+            style="@style/AuthTextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_password"
+            android:layout_marginBottom="28dp"
+            app:startIconDrawable="@drawable/outline_password_24"
+            app:startIconTint="?attr/colorBrand"
+            app:endIconMode="password_toggle"
+            app:endIconTint="?attr/colorBrand">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textColor="?attr/textPrimary"
+                android:paddingStart="8dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorDanger"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:visibility="gone"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_error"/>
+
+        <Button
+            android:id="@+id/btnRegister"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Gửi mã xác thực"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/iconColorOnBrand"
+            android:backgroundTint="?attr/colorBrand"
+            android:stateListAnimator="@null"
+            android:layout_marginBottom="24dp"
+            app:cornerRadius="12dp"/>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:indeterminateTint="?attr/colorBrand"/>
+
+    </LinearLayout>
+</ScrollView>

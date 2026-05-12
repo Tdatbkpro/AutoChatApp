@@ -20,11 +20,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
+
 @Singleton
 class LlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelManager: ModelManager
-) {
+) : LlmEngineInterface  {
     // ── Scope riêng cho engine — không share với bên ngoài ───────────────────
     private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -55,7 +56,7 @@ class LlmEngine @Inject constructor(
     // LOAD MODEL
     // ────────────────────────────────────────────────────────────────────────
 
-    suspend fun loadModel(modelId: String): Result<Boolean> = withContext(Dispatchers.IO) {
+    override  suspend fun loadModel(modelId: String): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             unloadModel()
 
@@ -134,7 +135,7 @@ class LlmEngine @Inject constructor(
     //   5. cleanResponse xử lý triệt để think tags + lặp lại
     // ────────────────────────────────────────────────────────────────────────
 
-    suspend fun generate(
+    override  suspend fun generate(
         prompt: String,
         onToken: (String) -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -281,7 +282,7 @@ class LlmEngine @Inject constructor(
     // CONTROLS
     // ────────────────────────────────────────────────────────────────────────
 
-    fun stopGeneration() {
+    override fun stopGeneration() {
         isStopped.set(true)
         try {
             llamaHelper?.stopPrediction()
@@ -292,7 +293,7 @@ class LlmEngine @Inject constructor(
         }
     }
 
-    fun unloadModel() {
+    override fun unloadModel() {
         collectJob?.cancel()
         collectJob = null
         try {
@@ -306,7 +307,7 @@ class LlmEngine @Inject constructor(
         isModelLoaded  = false
     }
 
-    fun isLoaded(): Boolean          = isModelLoaded && llamaHelper != null
-    fun isNativeAvailable(): Boolean = true
-    fun getCurrentModelId(): String? = currentModelId
+    override fun isLoaded(): Boolean          = isModelLoaded && llamaHelper != null
+    override fun isNativeAvailable(): Boolean = true
+    override fun getCurrentModelId(): String? = currentModelId
 }

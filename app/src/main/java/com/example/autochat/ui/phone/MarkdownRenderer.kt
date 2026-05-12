@@ -49,37 +49,61 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
 
     // Thêm hàm này vào class MarkdownRenderer
     private fun preprocessLatex(content: String): String {
+        // 1. Bảo vệ code blocks
         val codeBlocks = mutableListOf<String>()
         var result = CODE_BLOCK_REGEX.replace(content) { match ->
             codeBlocks.add(match.value)
             "§CODE_BLOCK_${codeBlocks.size - 1}§"
         }
 
-        // ✅ Normalize \(...\) → $...$ (phòng model trả về sai format)
-        result = result.replace(Regex("\\\\\\((.+?)\\\\\\)")) { match ->
-            "\$${match.groupValues[1]}\$"
+        // 2. Normalize \(...\) → $$INLINE§§...$$INLINE§§ (placeholder riêng, không conflict)
+        val inlineBlocks = mutableListOf<String>()
+        result = result.replace(Regex("\\\\\\((.+?)\\\\\\)", RegexOption.DOT_MATCHES_ALL)) { match ->
+            inlineBlocks.add(match.groupValues[1])
+            "§INLINE_${inlineBlocks.size - 1}§"
         }
 
-        // ✅ Normalize \[...\] → $$...$$
+        // 3. Normalize \[...\] → §BLOCK§
+        val blockBlocks = mutableListOf<String>()
         result = result.replace(Regex("\\\\\\[([\\s\\S]+?)\\\\\\]")) { match ->
-            "\$\$${match.groupValues[1]}\$\$"
+            blockBlocks.add(match.groupValues[1])
+            "§BLOCK_${blockBlocks.size - 1}§"
         }
 
-        // Bảo vệ $$ blocks
+        // 4. Bảo vệ $$...$$ blocks
         val dollarBlocks = mutableListOf<String>()
         result = MATH_BLOCK_DOLLAR_REGEX.replace(result) { match ->
-            dollarBlocks.add(match.value)
+            dollarBlocks.add(match.groupValues[1])
             "§DOLLAR_BLOCK_${dollarBlocks.size - 1}§"
         }
 
-        // Convert inline $...$ → \(...\) để Markwon render
-        result = result.replace(Regex("\\$([^\\$\\n]+?)\\$")) { match ->
-            "\\(${match.groupValues[1]}\\)"
+        // 5. Convert inline $...$ → placeholder
+        //    - Bắt đầu bằng $ không phải $$
+        //    - Cho phép \frac, \sin, \cos, \sqrt, dấu ngoặc, v.v.
+        //    - Kết thúc bằng $ không phải $$
+        result = result.replace(
+            Regex("(?<![\\\\$])\\$(?!\\$)((?:\\\\[a-zA-Z{}\\[\\]()^_+\\-=.,!|*&]|[^$\n])+?)(?<!\\\\)\\$(?!\\$)")
+        ) { match ->
+            val inner = match.groupValues[1].trim()
+            // Bỏ qua nếu là số đơn (giá tiền $5, $10)
+            if (inner.matches(Regex("\\d+(\\.\\d+)?"))) return@replace match.value
+            inlineBlocks.add(inner)
+            "§INLINE_${inlineBlocks.size - 1}§"
         }
 
-        // Restore $$ blocks
-        dollarBlocks.forEachIndexed { i, b -> result = result.replace("§DOLLAR_BLOCK_${i}§", b) }
-        codeBlocks.forEachIndexed { i, b -> result = result.replace("§CODE_BLOCK_${i}§", b) }
+        // 6. Restore tất cả về định dạng Markwon hiểu
+        inlineBlocks.forEachIndexed { i, latex ->
+            result = result.replace("§INLINE_${i}§", "\\(${latex}\\)")
+        }
+        blockBlocks.forEachIndexed { i, latex ->
+            result = result.replace("§BLOCK_${i}§", "\$\$${latex}\$\$")
+        }
+        dollarBlocks.forEachIndexed { i, latex ->
+            result = result.replace("§DOLLAR_BLOCK_${i}§", "\$\$${latex}\$\$")
+        }
+        codeBlocks.forEachIndexed { i, b ->
+            result = result.replace("§CODE_BLOCK_${i}§", b)
+        }
 
         return result
     }
@@ -278,7 +302,11 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
 
     // ── Make views ──────────────────────────────────────────────────
 
-    private fun makeTextView(container: LinearLayout, text: String, markwon: Markwon): TextView {
+    private fun makeTextView(container: LinearLayout, text: String, markwon: Markwon): View {
+        // ✅ Nếu có bullet list chứa inline math → tách ra render từng dòng
+        if (text.contains(Regex("^[\\s]*[-*•]\\s+.*\\$", RegexOption.MULTILINE))) {
+            return makeBulletListWithMath(container, text, markwon)
+        }
         return TextView(container.context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -290,6 +318,108 @@ class MarkdownRenderer(private val markwon: Markwon, private val codeExecutor: C
             setLineSpacing(0f, 1.3f)
             markwon.setMarkdown(this, text)
         }
+    }
+
+    private fun makeBulletListWithMath(container: LinearLayout, text: String, markwon: Markwon): View {
+        val wrapper = LinearLayout(container.context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Tách thành các đoạn: non-bullet và bullet
+        val lines = text.split("\n")
+        val segments = mutableListOf<Pair<Boolean, MutableList<String>>>() // isBullet, lines
+
+        for (line in lines) {
+            val isBullet = line.trimStart().matches(Regex("[-*•]\\s+.*"))
+            if (segments.isEmpty() || segments.last().first != isBullet) {
+                segments.add(Pair(isBullet, mutableListOf(line)))
+            } else {
+                segments.last().second.add(line)
+            }
+        }
+
+        for ((isBullet, segLines) in segments) {
+            if (!isBullet) {
+                // Non-bullet: render bình thường
+                val segText = segLines.joinToString("\n").trim()
+                if (segText.isNotBlank()) {
+                    val tv = TextView(container.context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        textSize = 15f
+                        setTextColor(0xFFE0E0F0.toInt())
+                        setTextIsSelectable(true)
+                        setLineSpacing(0f, 1.3f)
+                        markwon.setMarkdown(this, segText)
+                    }
+                    wrapper.addView(tv)
+                }
+            } else {
+                // ✅ Bullet lines: mỗi item một row riêng để JLatexMath hoạt động
+                for (bulletLine in segLines) {
+                    val trimmed = bulletLine.trimStart()
+                    if (trimmed.isBlank()) continue
+
+                    // Tách bullet prefix và content
+                    val contentMatch = Regex("^[-*•]\\s+(.*)$").find(trimmed)
+                    val content = contentMatch?.groupValues?.get(1) ?: trimmed
+
+                    val row = LinearLayout(container.context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).also { it.topMargin = 4 }
+                    }
+
+                    // Bullet dot
+                    val bulletDot = TextView(container.context).apply {
+                        setText("•")
+                        textSize = 15f
+                        setTextColor(0xFFE0E0F0.toInt())
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).also {
+                            it.marginEnd = 8
+                            it.topMargin = 2
+                        }
+                        setPadding(8, 0, 0, 0)
+                    }
+
+
+
+                    // Content — gọi markwon.setMarkdown() riêng → JLatexMath nhận đúng
+                    val contentTv = TextView(container.context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        )
+                        textSize = 15f
+                        setTextColor(0xFFE0E0F0.toInt())
+                        setTextIsSelectable(true)
+                        setLineSpacing(0f, 1.3f)
+                        // ✅ render từng bullet item độc lập — không có bullet wrapper nên JLatexMath hoạt động
+                        markwon.setMarkdown(this, content)
+                    }
+
+                    row.addView(bulletDot)
+                    row.addView(contentTv)
+
+
+                    wrapper.addView(row)
+                }
+            }
+        }
+
+        return wrapper
     }
 
     private fun makeCodeBlock(container: LinearLayout, language: String, code: String): View {

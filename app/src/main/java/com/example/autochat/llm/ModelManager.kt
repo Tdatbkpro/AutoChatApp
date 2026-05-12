@@ -8,13 +8,19 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.*
+import org.json.JSONObject
 import java.io.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
-
+enum class ModelType {
+    GGUF,   // llama.cpp — file .gguf
+    ONNX,   // ONNX Runtime — thư mục chứa model.onnx + tokenizer.json
+    TFLITE, // TensorFlow Lite (dự phòng tương lai)
+    UNKNOWN,
+}
 @Singleton
 class ModelManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -30,7 +36,12 @@ class ModelManager @Inject constructor(
 
     // cancelFlags: set true → dừng vòng I/O ngay sau chunk hiện tại
     private val cancelFlags = mutableMapOf<String, AtomicBoolean>()
-
+    data class OnnxFileInfo(
+        val filename: String,
+        val sizeMB: Long,
+        val sizeKB: Int = 0,
+        val required: Boolean = false,   // model.onnx + tokenizer.json là bắt buộc
+    )
     data class ModelInfo(
         val id: String,
         val name: String,
@@ -38,6 +49,7 @@ class ModelManager @Inject constructor(
         val sizeMB: Long,
         val downloadUrl: String,
         val filename: String,
+        val modelType: ModelType = ModelType.GGUF,
         val isDownloaded: Boolean = false,
         val isDownloading: Boolean = false,
         val downloadProgress: Float = 0f,
@@ -99,11 +111,169 @@ class ModelManager @Inject constructor(
             )
         }
     }
+    fun isOnnxModel(modelId: String): Boolean =
+        modelId.contains("onnx", ignoreCase = true) ||
+                getModelType(modelId) == ModelType.ONNX
+    suspend fun addCustomOnnxModel(
+        name: String,
+        description: String,
+        repoUrl: String,
+        estimatedSizeMB: Long = 0,
+        selectedFiles: List<String> = emptyList(),
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val baseUrl = repoUrl.trimEnd('/').replace("/resolve/main", "")
+            val downloadUrl = "$baseUrl/resolve/main"
 
+            val existingModels = getCustomModels()
+            if (existingModels.any { it.downloadUrl == downloadUrl }) {
+                return@withContext Result.failure(Exception("Model đã tồn tại"))
+            }
+
+            // ✅ id KHÔNG có prefix "custom_onnx", chỉ là timestamp
+            // vì customModelDao lưu raw id, còn "custom_" được thêm khi đọc ra
+            val rawId = "onnx_${System.currentTimeMillis()}"
+            customModelDao.insertModel(CustomModelEntity(
+                id           = rawId,
+                name         = name,
+                description  = description,
+                sizeMB       = estimatedSizeMB,
+                downloadUrl  = downloadUrl,
+                filename     = "model.onnx",
+                isDownloaded = false,
+                filesToDownload = org.json.JSONArray(selectedFiles).toString()
+            ))
+
+            Result.success("custom_$rawId")
+
+        } catch (e: Exception) {
+            Log.e("ModelManager", "addCustomOnnxModel error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+    suspend fun getOnnxFilesToDownload(modelId: String): List<String> {
+        val cleanId = modelId.removePrefix("custom_")
+        val entity  = customModelDao.getModelById(cleanId)
+            ?: return listOf("model.onnx", "tokenizer.json")
+        return try {
+            val arr = org.json.JSONArray(entity.filesToDownload)
+            (0 until arr.length()).map { arr.getString(it) }
+                .ifEmpty { listOf("model.onnx", "tokenizer.json") }
+        } catch (e: Exception) {
+            listOf("model.onnx", "tokenizer.json")
+        }
+    }
+    suspend fun downloadOnnxModel(
+        modelId: String,
+        baseUrl: String,          // VD: "https://huggingface.co/org/repo/resolve/main"
+        files: List<String>,      // VD: ["model.onnx", "tokenizer.json"]
+        onTotalBytes: (Long) -> Unit = {},
+        onProgress: (Float, Long) -> Unit,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // Tạo thư mục riêng cho model
+            val modelDir = File(modelsDir, modelId).also { it.mkdirs() }
+
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(300, TimeUnit.SECONDS)
+                .build()
+
+            var totalDownloaded = 0L
+            val totalFiles      = files.size
+
+            files.forEachIndexed { fileIdx, filename ->
+                // Bỏ qua nếu đã tải
+                val destFile = File(modelDir, filename)
+                if (destFile.exists() && destFile.length() > 0) {
+                    totalDownloaded += destFile.length()
+                    onProgress((fileIdx + 1).toFloat() / totalFiles, totalDownloaded)
+                    Log.d("ModelManager", "ONNX skip existing: $filename")
+                    return@forEachIndexed
+                }
+
+                // Tạo thư mục con nếu filename có path (VD: "onnx/model.onnx")
+                destFile.parentFile?.mkdirs()
+
+                val fileUrl = "${baseUrl.trimEnd('/')}/$filename"
+                Log.d("ModelManager", "ONNX downloading: $fileUrl")
+
+                val request  = Request.Builder().url(fileUrl).build()
+                val response = client.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(
+                        Exception("Download failed $filename: HTTP ${response.code}")
+                    )
+                }
+
+                val contentLength = response.body?.contentLength() ?: 0L
+                if (contentLength > 0) onTotalBytes(contentLength)
+
+                // Stream to file
+                response.body?.byteStream()?.use { input ->
+                    FileOutputStream(destFile).use { output ->
+                        val buffer   = ByteArray(8192)
+                        var bytes    = 0L
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1) {
+                            // Check cancel signal
+                            if (isCancelled(modelId)) {
+                                destFile.delete()
+                                return@withContext Result.failure(Exception("Cancelled"))
+                            }
+                            output.write(buffer, 0, read)
+                            bytes           += read
+                            totalDownloaded += read
+                            val fileProgress = bytes.toFloat() / contentLength.coerceAtLeast(1)
+                            val totalProgress = (fileIdx + fileProgress) / totalFiles
+                            onProgress(totalProgress, totalDownloaded)
+                        }
+                    }
+                } ?: return@withContext Result.failure(Exception("Empty body for $filename"))
+
+                Log.d("ModelManager", "ONNX downloaded: $filename (${destFile.length()} bytes)")
+            }
+
+            // Lưu path = thư mục vào SharedPreferences / Room
+            // Lưu path = thư mục vào SharedPreferences
+            saveModelPath(modelId, modelDir.absolutePath)
+
+            // ✅ THÊM: Update DB isDownloaded = true
+            val cleanId = modelId.removePrefix("custom_")
+            customModelDao.getModelById(cleanId)?.let { entity ->
+                customModelDao.updateModel(entity.copy(
+                    isDownloaded = true,
+                    filePath     = modelDir.absolutePath,
+                    sizeMB       = modelDir.walkTopDown()
+                        .filter { it.isFile }
+                        .sumOf { it.length() } / (1024 * 1024)
+                ))
+            }
+
+            Log.d("ModelManager", "✅ ONNX model ready at: ${modelDir.absolutePath}")
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+            Log.e("ModelManager", "downloadOnnxModel error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    private val prefs = context.getSharedPreferences("model_paths", Context.MODE_PRIVATE)
+
+    private fun saveModelPath(modelId: String, path: String) {
+        prefs.edit().putString("path_$modelId", path).apply()
+    }
+
+
+    private fun isCancelled(modelId: String): Boolean {
+        return cancelFlags[modelId]?.get() == true
+    }
     /** Dừng vòng I/O ngay, KHÔNG xóa file → dùng khi pause */
     fun signalPause(modelId: String) {
         cancelFlags[modelId]?.set(true)
     }
+
 
     /** Dừng vòng I/O ngay VÀ xóa file → dùng khi cancel hoàn toàn */
     fun signalCancel(modelId: String) {
@@ -129,6 +299,19 @@ class ModelManager @Inject constructor(
     }
 
     fun getModelPath(modelId: String): String? {
+        // ✅ 1. Check SharedPreferences trước (ONNX lưu path thư mục ở đây)
+        val savedPath = prefs.getString("path_$modelId", null)
+        if (savedPath != null && File(savedPath).exists()) return savedPath
+
+        // ✅ 2. Check filePath trong DB (custom model đã download)
+        val entity = runBlocking {
+            customModelDao.getModelById(modelId.removePrefix("custom_"))
+        }
+        if (entity?.filePath != null && File(entity.filePath).exists()) {
+            return entity.filePath
+        }
+
+        // 3. Fallback: GGUF file thông thường
         val model = findModelById(modelId) ?: return null
         val file = File(modelsDir, model.filename)
         return if (file.exists()) file.absolutePath else null
@@ -568,6 +751,102 @@ class ModelManager @Inject constructor(
             emptyList()
         }
     }
+    suspend fun getOnnxFileList(repoUrl: String): List<OnnxFileInfo> =
+        withContext(Dispatchers.IO) {
+            try {
+                val normalized = repoUrl
+                    .trimEnd('/')
+                    .replace("/resolve/main", "")
+                    .replace("https://huggingface.co/", "")
+
+                val apiUrl = "https://huggingface.co/api/models/$normalized"
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    .readTimeout(15, TimeUnit.SECONDS)
+                    .build()
+
+                val response = client.newCall(Request.Builder().url(apiUrl).build()).execute()
+                if (!response.isSuccessful) return@withContext emptyList()
+
+                val json     = JSONObject(response.body!!.string())
+                val siblings = json.getJSONArray("siblings")
+
+                val interestingExts = setOf(".onnx", ".json", ".txt")
+                val onnxFiles = (0 until siblings.length())
+                    .map { siblings.getJSONObject(it).getString("rfilename") }
+                    .filter { it.endsWith(".onnx") }
+
+                val requiredFiles = setOf(
+                    "tokenizer.json",
+                    "tokenizer_config.json",
+                    "config.json",
+                    "generation_config.json",
+                    "vocab.json",
+                    "merges.txt",
+                    "special_tokens_map.json",
+                    "added_tokens.json",
+                )
+                val baseDownloadUrl = "https://huggingface.co/$normalized/resolve/main"
+
+                val files = (0 until siblings.length())
+                    .map { siblings.getJSONObject(it) }
+                    .filter { obj ->
+                        val name = obj.getString("rfilename")
+                        interestingExts.any { name.endsWith(it, ignoreCase = true) }
+                    }
+                    .map { obj ->
+                        val name  = obj.getString("rfilename")
+                        // Thử lấy từ API trước
+                        var sizeB = obj.optLong("size", 0L)
+                        // Nếu API không có → HEAD request
+                        if (sizeB <= 0) {
+                            val fileUrl = "$baseDownloadUrl/$name"
+                            sizeB = try {
+                                getUrlFileSizeBytes("$fileUrl") ?: 0L
+                            } catch (e: Exception) { 0L }
+                        }
+                        OnnxFileInfo(
+                            filename = name,
+                            sizeMB   = sizeB / (1024 * 1024),
+                            sizeKB   = (sizeB / 1024).toInt(),
+                            required = name in requiredFiles,
+                        )
+                    }
+                    .sortedWith(compareByDescending<OnnxFileInfo> { it.required }.thenBy { it.filename })
+
+                files
+            } catch (e: Exception) {
+                Log.e("ModelManager", "getOnnxFileList error: ${e.message}")
+                emptyList()
+            }
+        }
+    private suspend fun getUrlFileSizeBytes(url: String): Long? = withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build()
+
+            val request = Request.Builder()
+                .url(url)
+                .header("Range", "bytes=0-0")
+                .header("User-Agent", "Mozilla/5.0")
+                .get()
+                .build()
+
+            val response = client.newCall(request).execute()
+            val size = when (response.code) {
+                200  -> response.body?.contentLength()
+                206  -> response.header("Content-Range")
+                    ?.substringAfterLast("/")?.toLongOrNull()
+                else -> null
+            }
+            response.close()
+            if (size != null && size > 0) size else null
+        } catch (e: Exception) { null }
+    }
 
     // Hàm lấy size cho 1 file
      suspend fun getFileSize(repoUrl: String, filename: String): Long = withContext(Dispatchers.IO) {
@@ -610,11 +889,30 @@ class ModelManager @Inject constructor(
         val cleanId = modelId.removePrefix("custom_")
         val entity = customModelDao.getModelById(cleanId) ?: return
 
-        // Xóa file
+        // Xóa file GGUF
+        entity.filePath?.let { File(it).delete() }
         File(modelsDir, entity.filename).delete()
+
+        // ✅ Xóa thư mục ONNX (modelId là tên thư mục)
+        File(modelsDir, modelId).deleteRecursively()
+        File(modelsDir, cleanId).deleteRecursively()
+
+        // ✅ Xóa theo filePath nếu là thư mục
+        entity.filePath?.let { path ->
+            val f = File(path)
+            if (f.isDirectory) f.deleteRecursively()
+            else f.parentFile?.let { parent ->
+                if (parent != modelsDir) parent.deleteRecursively()
+            }
+        }
+
+        // ✅ Xóa SharedPreferences path
+        prefs.edit().remove("path_$modelId").remove("path_custom_$cleanId").apply()
 
         // Xóa khỏi Room
         customModelDao.deleteById(cleanId)
+
+        Log.d("ModelManager", "Deleted model: $modelId")
     }
     suspend fun updateCustomModel(
         modelId: String,
@@ -671,6 +969,29 @@ class ModelManager @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("ModelManager", "getUrlFileSize error: ${e.message}")
             null
+        }
+    }
+    fun getModelDir(modelId: String): File? {
+        // ✅ Thử tìm thư mục ONNX trực tiếp theo modelId
+        val onnxDir = File(modelsDir, modelId)
+        if (onnxDir.exists() && onnxDir.isDirectory) return onnxDir
+
+        // Fallback: lấy từ getModelPath
+        val path = getModelPath(modelId) ?: return null
+        val f = File(path)
+        return if (f.isDirectory) f else f.parentFile
+    }
+    fun getModelType(modelId: String): ModelType {
+        val path = getModelPath(modelId) ?: run {
+            // Chưa download nhưng có thể biết type từ modelId
+            return if (modelId.contains("onnx", ignoreCase = true)) ModelType.ONNX else ModelType.GGUF
+        }
+        return when {
+            path.endsWith(".gguf", ignoreCase = true)       -> ModelType.GGUF
+            File(path).isDirectory &&
+                    File(path, "model.onnx").exists()       -> ModelType.ONNX
+            modelId.contains("onnx", ignoreCase = true)     -> ModelType.ONNX
+            else                                            -> ModelType.GGUF
         }
     }
 }

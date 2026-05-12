@@ -1,9 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- ════════════════════════════════
+         App info
+         ════════════════════════════════ -->
     <string name="app_name">Autochat</string>
+    <string name="app_version_value">1.0.0</string>
+    <string name="app_tagline">Trợ lý thông minh trên xe hơi</string>
+
+    <!-- ════════════════════════════════
+         Section titles
+         ════════════════════════════════ -->
+    <string name="section_mine">ChatGPT của tôi</string>
+    <string name="section_profile">Hồ sơ</string>
+    <string name="section_account">Tài khoản</string>
+    <string name="section_android_auto">Android Auto</string>
+    <string name="section_appearance">Giao diện</string>
+    <string name="section_app">Ứng dụng</string>
+
+    <!-- ════════════════════════════════
+         Setting item labels
+         ════════════════════════════════ -->
+    <string name="setting_personalize">Cá nhân hóa</string>
+    <string name="setting_memory">Bộ nhớ</string>
+    <string name="setting_apps">Ứng dụng</string>
+    <string name="setting_workspace">Không gian làm việc</string>
+    <string name="setting_workspace_subtitle">Cá nhân</string>
+    <string name="setting_upgrade">Nâng cấp lên Plus</string>
+    <string name="setting_parental">Quyền kiểm soát của cha mẹ</string>
+    <string name="setting_email">Email</string>
+    <string name="setting_email_empty">Chưa có email</string>
+    <string name="setting_phone">Số điện thoại</string>
+    <string name="setting_phone_empty">Chưa có số điện thoại</string>
+    <string name="setting_generate_pin">Tạo PIN cho xe</string>
+    <string name="setting_generate_pin_subtitle">Dùng mã này để đăng nhập trên Android Auto</string>
+    <string name="setting_theme">Giao diện</string>
+    <string name="setting_theme_subtitle">Hệ thống (Mặc định)</string>
+    <string name="setting_language">Ngôn ngữ</string>
+    <string name="setting_language_value">Tiếng Việt</string>
+    <string name="setting_text_size">Cỡ chữ</string>
+    <string name="setting_text_size_value">18</string>
+    <string name="setting_app_version">Phiên bản</string>
+    <string name="setting_logout">Đăng xuất</string>
+    <string name="setting_logout_subtitle">Thoát khỏi tài khoản hiện tại</string>
+
+    <!-- ════════════════════════════════
+         Auth
+         ════════════════════════════════ -->
+    <string name="tab_login">Đăng nhập</string>
+    <string name="tab_register">Đăng ký</string>
+    <string name="hint_display_name">Tên hiển thị</string>
+    <string name="hint_email">Địa chỉ email</string>
+    <string name="hint_password">Mật khẩu</string>
+    <string name="hint_new_password">Mật khẩu mới</string>
+    <string name="hint_confirm_password">Xác nhận mật khẩu mới</string>
+    <string name="btn_login">Đăng nhập</string>
+    <string name="btn_register">Đăng ký</string>
+    <string name="btn_logging_in">Đang đăng nhập…</string>
+    <string name="btn_registering">Đang đăng ký…</string>
+    <string name="btn_forgot_password">Quên mật khẩu?</string>
+    <string name="btn_send_otp">Gửi mã xác thực</string>
+    <string name="btn_confirm_password">Xác nhận mật khẩu mới</string>
+
+    <!-- Forgot password screens -->
+    <string name="title_forgot_password">Quên mật khẩu</string>
+    <string name="subtitle_forgot_password">Nhập email để nhận mã xác thực\nđặt lại mật khẩu</string>
+    <string name="title_new_password">Đặt mật khẩu mới</string>
+    <string name="subtitle_new_password">Nhập mật khẩu mới cho tài khoản\ncủa bạn</string>
+    <string name="success_reset_password">Đặt lại mật khẩu thành công!</string>
+
+    <!-- ════════════════════════════════
+         Theme options
+         ════════════════════════════════ -->
+    <string name="theme_light">Sáng</string>
+    <string name="theme_dark">Tối</string>
+    <string name="theme_system">Hệ thống (Mặc định)</string>
+
+    <!-- ════════════════════════════════
+         Common actions
+         ════════════════════════════════ -->
+    <string name="settings">Cài đặt</string>
     <string name="voice_input">Nói</string>
     <string name="new_chat">Mới</string>
-    <string name="fragment_history_name">Lịch sử trò truyện</string>
+    <string name="fragment_history_name">Lịch sử trò chuyện</string>
     <string name="fragment_history_rong">Chưa có lịch sử nào</string>
     <string name="shortcut_voice_short">Hỏi Đạt</string>
     <string name="shortcut_voice_long">Đặt câu hỏi cho Đạt</string>
+    <string name="tts_label">VieNeu TTS</string>
+    <string name="back">Trở về</string>
+    <string name="close">Đóng</string>
+    <string name="cancel">Hủy</string>
+    <string name="logout">Đăng xuất</string>
+    <string name="logout_confirm_message">Bạn có chắc muốn đăng xuất không?</string>
+    <string name="play_pause">Phát/Tạm dừng</string>
+
+    <!-- ════════════════════════════════
+         PIN dialog
+         ════════════════════════════════ -->
+    <string name="pin_dialog_title">🔐 Mã PIN cho xe</string>
+    <!-- %1$d = minutes, %2$02d = seconds (zero-padded) -->
+    <string name="pin_expires_in">Hết hạn sau %1$d:%2$02d</string>
+
+    <!-- ════════════════════════════════
+         Error messages
+         ════════════════════════════════ -->
+    <string name="error_session_expired">Phiên đăng nhập hết hạn, vui lòng đăng nhập lại</string>
+    <string name="error_no_connection">Không thể kết nối server</string>
+    <string name="error_pin_failed">Không thể tạo PIN, thử lại</string>
+    <string name="error_logout_failed">Đăng xuất thất bại</string>
+    <string name="error_email_empty">Vui lòng nhập email</string>
+    <string name="error_email_invalid">Email không hợp lệ</string>
+    <string name="error_password_short">Mật khẩu tối thiểu 6 ký tự</string>
+    <string name="error_password_mismatch">Mật khẩu xác nhận không khớp</string>
+    <string name="error_username_empty">Vui lòng nhập tên hiển thị</string>
+    <string name="error_username_short">Tên hiển thị tối thiểu 3 ký tự</string>
+    <string name="error_unauthorized">Email hoặc mật khẩu không đúng</string>
+    <string name="error_conflict">Email đã tồn tại</string>
+    <string name="error_bad_request">Dữ liệu không hợp lệ</string>
+    <string name="error_timeout">Không thể kết nối đến server</string>
+    <string name="error_no_network">Không có kết nối mạng</string>
+    <string name="error_network">Lỗi kết nối mạng</string>
+    <string name="error_generic">Có lỗi xảy ra, vui lòng thử lại</string>
+
 </resources>

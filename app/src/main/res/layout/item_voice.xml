@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_voice_item"
+    android:padding="10dp"
+    android:layout_marginBottom="6dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Avatar -->
+    <TextView android:id="@+id/tvVoiceAvatar"
+        android:text="👩"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:background="@drawable/bg_circle_dark"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="10dp"/>
+
+    <!-- Info -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView android:id="@+id/tvVoiceName"
+            android:textColor="?attr/textPrimary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TextView android:id="@+id/tvVoiceMeta"
+            android:textColor="?attr/textHint2"
+            android:textSize="10sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <!-- Preview button -->
+    <ImageButton
+        android:id="@+id/btnPreview"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_play"
+        android:background="@drawable/bg_circle_blue"
+        android:padding="6dp"
+        android:layout_marginEnd="8dp"
+        app:tint="?attr/colorBrand"/>
+
+    <!-- Check icon -->
+    <ImageView android:id="@+id/ivVoiceCheck"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_check_circle"
+        android:visibility="invisible"
+        app:tint="?attr/colorTeal"/>
+
+</LinearLayout>

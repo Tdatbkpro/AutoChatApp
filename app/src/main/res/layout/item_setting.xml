@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="52dp"
+    android:orientation="vertical">
+
+    <!-- Main row content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="52dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
+
+        <!-- Leading icon container -->
+        <FrameLayout
+            android:id="@+id/flIconContainer"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="14dp"
+            android:background="@drawable/bg_circle_dark">
+
+            <ImageView
+                android:id="@+id/ivIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:tint="?attr/colorBrand"
+                tools:src="@drawable/ic_person"
+                tools:ignore="UseAppTint" />
+
+        </FrameLayout>
+
+        <!-- Title + Subtitle -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/SettingsItemTitle"/>
+
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/SettingsItemSubtitle"
+                android:visibility="gone"
+                tools:text="Cá nhân"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Value chip (e.g. version) -->
+        <TextView
+            android:id="@+id/tvValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:textColor="?attr/textSecondary"
+            android:textSize="13sp"
+            android:visibility="gone"
+            tools:text="1.0.0"
+            tools:visibility="visible" />
+
+        <!-- Chevron -->
+        <ImageView
+            android:id="@+id/ivArrow"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_chevron_right"
+            android:visibility="gone"
+            app:tint="?attr/textSecondary"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+    <!-- Inset divider (hidden for last item in group, shown via adapter) -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="62dp"
+        android:background="?attr/strokeChip"
+        android:visibility="gone" />
+
+</LinearLayout>

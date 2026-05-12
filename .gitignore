@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystore — thêm dòng này nếu có ký app
+*.jks
+*.keystore

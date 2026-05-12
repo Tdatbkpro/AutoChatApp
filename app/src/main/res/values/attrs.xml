@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════╗
+    ║  AutoChat · THEME ATTRIBUTES (Design Tokens)            ║
+    ║  Đây là "ngôn ngữ" của theme.                          ║
+    ║  Layout và Drawable CHỈ dùng ?attr/...                  ║
+    ║  KHÔNG dùng @color/ trực tiếp.                         ║
+    ╚══════════════════════════════════════════════════════════╝
+
+    NHÓM:
+    ① Backgrounds     — bgXxx
+    ② Strokes/Borders — strokeXxx
+    ③ Text            — textXxx / colorXxx
+    ④ Chat bubbles    — bgBubbleXxx
+    ⑤ Interactive     — rippleColor, colorBrand
+    ⑥ TTS / Player    — bgEngineXxx, colorPlayer…
+    ⑦ Settings UI     — bgSettingXxx
+    ⑧ Semantic status — colorSuccess, colorWarning…
+    ⑨ Custom views    — WaveformView, PlayerBar
+-->
+<resources>
+    <!-- ════════════ ICON SYSTEM ════════════ -->
+
+    <!-- Default / secondary icon -->
+    <!-- Main foreground icon -->
+    <attr name="iconColorPrimary"         format="color"/>
+
+    <!-- Muted / subtitle icon -->
+    <attr name="iconColorSecondary"       format="color"/>
+
+    <!-- Disabled state -->
+    <attr name="iconColorDisabled"        format="color"/>
+
+    <!-- Active / selected -->
+    <attr name="iconColorActive"          format="color"/>
+
+    <!-- Brand accent -->
+    <attr name="iconColorBrand"           format="color"/>
+
+    <!-- Danger / destructive -->
+    <attr name="iconColorDanger"          format="color"/>
+
+    <!-- Success state -->
+    <attr name="iconColorSuccess"         format="color"/>
+
+    <!-- White icon on dark/brand bg -->
+    <attr name="iconColorOnBrand"         format="color"/>
+    <!-- ════════════ ① BACKGROUNDS ════════════ -->
+
+    <!-- Root / screen -->
+    <attr name="bgApp"                  format="color"/>   <!-- root screen background -->
+    <attr name="bgSurface"              format="color"/>   <!-- toolbar, bottom nav, header -->
+    <attr name="bgCard"                 format="color"/>   <!-- list items, standard cards -->
+    <attr name="bgElevated"             format="color"/>   <!-- dialogs, bottom-sheets, modals -->
+    <attr name="bgBottomSheet"          format="color"/>   <!-- bottom-sheet specifically -->
+    <attr name="bgScrim"                format="color"/>   <!-- dim overlay behind dialogs -->
+
+    <!-- Input / form fields -->
+    <attr name="bgInput"                format="color"/>   <!-- EditText box fill -->
+    <attr name="bgEditField"            format="color"/>   <!-- alternate field variant -->
+
+    <!-- Interactive controls -->
+    <attr name="bgChip"                 format="color"/>   <!-- chip / tag fill -->
+    <attr name="bgButton"               format="color"/>   <!-- primary button fill -->
+    <attr name="bgButtonGhost"          format="color"/>   <!-- ghost/secondary button fill -->
+    <attr name="bgAvatar"               format="color"/>   <!-- avatar circle fill -->
+    <attr name="bgBadge"                format="color"/>   <!-- notification badge fill -->
+
+    <!-- Contextual surfaces -->
+    <attr name="bgCodeBlock"            format="color"/>   <!-- code block container -->
+    <attr name="bgCodeAction"           format="color"/>   <!-- code block action bar -->
+    <attr name="bgDialog"               format="color"/>   <!-- dialog background -->
+    <attr name="bgEndpointPill"         format="color"/>   <!-- API endpoint pill fill -->
+    <attr name="bgEndpointPillPressed"  format="color"/>   <!-- … pressed state -->
+    <attr name="bgCircle"               format="color"/>   <!-- generic circle bg -->
+    <attr name="bgCircleDark"           format="color"/>   <!-- dark-variant circle -->
+    <attr name="bgCircleBlue"           format="color"/>   <!-- blue-tinted circle -->
+    <attr name="bgCircleRed"            format="color"/>   <!-- red-tinted circle (danger) -->
+    <attr name="bgDescriptionBar"       format="color"/>   <!-- description / subtitle bar -->
+    <attr name="bgDrawerHeader"         format="color"/>   <!-- nav-drawer header start -->
+    <attr name="bgDrawerHeaderEnd"      format="color"/>   <!-- nav-drawer header end (gradient fallback) -->
+    <attr name="bgGhBtn"                format="color"/>   <!-- ghost button normal -->
+    <attr name="bgGhBtnPressed"         format="color"/>   <!-- ghost button pressed -->
+    <attr name="bgErrorSurface"         format="color"/>   <!-- error state surface -->
+
+    <!-- Danger / destructive -->
+    <attr name="bgDanger"               format="color"/>   <!-- destructive action surface -->
+
+
+    <!-- ════════════ ② CHAT BUBBLES ════════════ -->
+
+    <attr name="bgBubbleAi"             format="color"/>   <!-- AI / assistant bubble -->
+    <attr name="bgBubbleUser"           format="color"/>   <!-- User bubble (brand color) -->
+    <attr name="strokeBubbleAi"         format="color"/>   <!-- AI bubble border -->
+    <attr name="textBubbleAiLabel"      format="color"/>   <!-- "Auto Chat" label text in bubble -->
+    <attr name="textBubbleAiBody"       format="color"/>   <!-- AI message body text -->
+    <attr name="textBubbleUser"         format="color"/>   <!-- User message text (always white) -->
+
+
+    <!-- ════════════ ③ STROKES / BORDERS ════════════ -->
+
+    <attr name="strokeDefault"          format="color"/>   <!-- generic border / divider -->
+    <attr name="strokeBlue"             format="color"/>   <!-- blue-tinted border -->
+    <attr name="strokeBlue2"            format="color"/>   <!-- stronger blue border -->
+    <attr name="strokeChip"             format="color"/>   <!-- chip border -->
+    <attr name="strokeInput"            format="color"/>   <!-- input field border (idle) -->
+    <attr name="strokeInputFocused"     format="color"/>   <!-- input field border (focused) -->
+    <attr name="strokeAvatar"           format="color"/>   <!-- avatar ring -->
+    <attr name="strokeCode"             format="color"/>   <!-- code block border -->
+    <attr name="strokeDialog"           format="color"/>   <!-- dialog border -->
+    <attr name="strokeEditField"        format="color"/>   <!-- edit field border -->
+    <attr name="strokeEndpointPill"     format="color"/>   <!-- endpoint pill border -->
+    <attr name="strokeGhBtn"            format="color"/>   <!-- ghost button border -->
+    <attr name="strokeGhBtnPressed"     format="color"/>   <!-- ghost button pressed border -->
+    <attr name="strokeError"            format="color"/>   <!-- error-state border -->
+    <attr name="strokeCircle"           format="color"/>   <!-- circle ring -->
+    <attr name="strokeDanger"           format="color"/>   <!-- danger-state border -->
+
+    <attr name="bgDangerSurface"        format="color"/>   <!-- danger icon container bg -->
+    <attr name="textDanger"             format="color"/>   <!-- destructive text color -->
+    <!-- ════════════ ④ TEXT / TYPOGRAPHY ════════════ -->
+
+    <attr name="textPrimary"            format="color"/>   <!-- headings, body copy -->
+    <attr name="textSecondary"          format="color"/>   <!-- sub-labels, timestamps -->
+    <attr name="textHint"               format="color"/>   <!-- placeholder / hint (lighter) -->
+    <attr name="textHint2"              format="color"/>   <!-- placeholder / hint (even lighter) -->
+    <attr name="textPin"                format="color"/>   <!-- pinned / highlighted text -->
+
+
+    <!-- ════════════ ⑤ INTERACTIVE / BRAND ════════════ -->
+
+    <attr name="rippleColor"            format="color"/>   <!-- touch ripple -->
+    <attr name="colorBrand"             format="color"/>   <!-- primary brand colour -->
+    <attr name="colorBrandSoft"         format="color"/>   <!-- brand pressed / darker -->
+    <attr name="colorDestructive"       format="color"/>   <!-- destructive actions -->
+    <attr name="colorDanger"            format="color"/>   <!-- danger status -->
+    <attr name="dividerColor"           format="color"/>   <!-- list dividers -->
+    <attr name="iconColor"              format="color"/>   <!-- default icon tint -->
+
+
+    <!-- ════════════ ⑥ TTS / PLAYER ════════════ -->
+
+    <!-- Engine cards -->
+    <attr name="bgEngineCard"           format="color"/>
+    <attr name="bgEngineCardActive"     format="color"/>
+    <attr name="strokeEngineCard"       format="color"/>
+    <attr name="strokeEngineActive"     format="color"/>
+    <attr name="textEngineActive"       format="color"/>
+
+    <!-- Tab bar (inside TTS settings) -->
+    <attr name="bgTabContainer"         format="color"/>
+    <attr name="bgTabActive"            format="color"/>
+
+    <!-- Badge (teal / TTS label) -->
+    <attr name="bgBadgeTeal"            format="color"/>
+    <attr name="strokeBadgeTeal"        format="color"/>
+
+    <!-- Teal semantic -->
+    <attr name="colorTeal"              format="color"/>
+    <attr name="colorTealDark"          format="color"/>
+
+    <!-- Player bar -->
+    <attr name="colorPlayerBar"         format="color"/>   <!-- bar background start -->
+    <attr name="colorPlayerBarBorder"   format="color"/>   <!-- bar top border -->
+    <attr name="colorPlayButtonStart"   format="color"/>   <!-- play button gradient start -->
+    <attr name="colorPlayButtonEnd"     format="color"/>   <!-- play button gradient end -->
+    <attr name="colorPlayerText"        format="color"/>   <!-- elapsed / duration text -->
+    <attr name="colorPlayerChipBg"      format="color"/>   <!-- speed / label chip in player -->
+
+
+    <!-- ════════════ ⑦ SETTINGS UI ════════════ -->
+
+    <attr name="bgSettingHeader"        format="reference|color"/>
+    <attr name="bgSettingItem"          format="reference|color"/>
+    <attr name="bgSettingSection"       format="reference|color"/>
+
+
+    <!-- ════════════ ⑧ SEMANTIC STATUS ════════════ -->
+
+    <attr name="colorSuccess"           format="color"/>
+    <attr name="colorWarning"           format="color"/>
+    <attr name="colorInfo"              format="color"/>
+
+
+    <!-- ════════════ ⑨ CUSTOM VIEW ATTRIBUTES ════════════ -->
+
+    <!-- WaveformView -->
+    <declare-styleable name="WaveformView">
+        <attr name="wavePlayedColor"    format="color"/>
+        <attr name="waveUnplayedColor"  format="color"/>
+        <attr name="waveHeightRatio"    format="float"/>
+        <attr name="waveBarCount"       format="integer"/>
+        <attr name="waveBarWidthRatio"  format="float"/>
+        <attr name="waveGlowEnabled"    format="boolean"/>
+        <attr name="waveCornerRadius"   format="dimension"/>
+    </declare-styleable>
+
+</resources>

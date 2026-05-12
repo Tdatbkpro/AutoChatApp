@@ -82,7 +82,7 @@ interface ChatRepository {
     suspend fun deleteMessages(sessionId: String)
     suspend fun deleteMessagePair(sessionId: String, userMessageId: String, botMessageId: String?)
     suspend fun updateSessionTitle(sessionId: String, newTitle: String)
-    suspend fun initRagSession(sessionId: String)
+//    suspend fun initRagSession(sessionId: String)
     suspend fun getArticleById(articleId: Int): Article?
     suspend fun getQuickReplies(location: String?): List<QuickReplyItem>
     suspend fun getNextArticle(currentId: Int, category: String?, seenIds: List<Int> = emptyList()): Article?

@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- ══════════════════════════════════════════
+         Main row — icon thay đổi theo theme đang chọn
+         ══════════════════════════════════════════ -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/rowMain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="52dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
+
+        <FrameLayout
+            android:id="@+id/flIconContainer"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_circle_dark"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <!-- Icon thay đổi khi chọn theme: ic_sun / ic_moon / ic_phone -->
+            <ImageView
+                android:id="@+id/ivIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_sun"
+                android:tint="?attr/textSecondary"
+                tools:ignore="UseAppTint" />
+
+        </FrameLayout>
+
+        <ImageView
+            android:id="@+id/ivArrow"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="?attr/textSecondary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:ignore="UseAppTint" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/setting_theme"
+            android:textColor="?attr/textPrimary"
+            android:textSize="15sp"
+            app:layout_constraintStart_toEndOf="@id/flIconContainer"
+            app:layout_constraintEnd_toStartOf="@id/ivArrow"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/tvCurrentTheme"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/tvCurrentTheme"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="2dp"
+            android:text="@string/theme_system"
+            android:textColor="?attr/textPrimary"
+            android:textSize="13sp"
+            app:layout_constraintStart_toEndOf="@id/flIconContainer"
+            app:layout_constraintEnd_toStartOf="@id/ivArrow"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ══════════════════════════════════════════
+         Expandable options panel
+         ══════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/panelOptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <!-- ── Sáng ─────────────────────────────────────────────────── -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/optionLight"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="16dp">
+
+            <!-- Icon Sáng: ic_sun, căn với icon container main row (marginStart = 16dp padding + 0 = align) -->
+            <ImageView
+                android:id="@+id/ivIconLight"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_sun"
+                android:tint="?attr/textSecondary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:ignore="UseAppTint" />
+
+            <TextView
+                android:id="@+id/tvLight"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/theme_light"
+                android:textColor="?attr/textPrimary"
+                android:textSize="15sp"
+                app:layout_constraintStart_toEndOf="@id/ivIconLight"
+                app:layout_constraintEnd_toStartOf="@id/checkLight"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/checkLight"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_check_badge"
+                android:tint="?attr/bgButtonGhost"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:visibility="visible"
+                tools:ignore="UseAppTint" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="48dp"
+            android:background="?attr/strokeEditField" />
+
+        <!-- ── Tối ──────────────────────────────────────────────────── -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/optionDark"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="16dp">
+
+            <!-- Icon Tối: ic_moon -->
+            <ImageView
+                android:id="@+id/ivIconDark"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_moon"
+                android:tint="?attr/textSecondary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:ignore="UseAppTint" />
+
+            <TextView
+                android:id="@+id/tvDark"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/theme_dark"
+                android:textColor="?attr/textPrimary"
+                android:textSize="15sp"
+                app:layout_constraintStart_toEndOf="@id/ivIconDark"
+                app:layout_constraintEnd_toStartOf="@id/checkDark"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/checkDark"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_check_badge"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="?attr/bgButtonGhost" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="48dp"
+            android:background="?attr/strokeEditField" />
+
+        <!-- ── Hệ thống ─────────────────────────────────────────────── -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/optionSystem"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="16dp">
+
+            <!-- Icon Hệ thống: ic_phone (theo hệ thống điện thoại) -->
+            <ImageView
+                android:id="@+id/ivIconSystem"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_system"
+                android:tint="?attr/textPrimary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:ignore="UseAppTint" />
+
+            <TextView
+                android:id="@+id/tvSystem"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/theme_system"
+                android:textColor="?attr/textPrimary"
+                android:textSize="15sp"
+                app:layout_constraintStart_toEndOf="@id/ivIconSystem"
+                app:layout_constraintEnd_toStartOf="@id/checkSystem"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/checkSystem"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_check_badge"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="?attr/bgButtonGhost" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom divider -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="62dp"
+        android:background="?attr/strokeEditField"
+        android:visibility="gone" />
+
+</LinearLayout>

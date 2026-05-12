@@ -16,8 +16,9 @@ data class CustomModelEntity(
     val filePath: String? = null,
     val isDownloaded: Boolean = false,
     val downloadedSizeMB: Long = 0,
-    val isVerified: Boolean = false,  // Đã verify chưa
-    val modelFormat: String = "GGUF", // GGUF, ONNX, etc.
-    val requiredRAM: Long = 0,        // RAM tối thiểu (MB)
-    val addedAt: Long = System.currentTimeMillis()
+    val isVerified: Boolean = false,
+    val modelFormat: String = "GGUF",
+    val requiredRAM: Long = 0,
+    val addedAt: Long = System.currentTimeMillis(),
+    val filesToDownload: String = "[]"  // ← thêm vào cuối
 )

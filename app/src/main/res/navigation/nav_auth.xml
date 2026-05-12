@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_auth"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.autochat.ui.phone.fragment.LoginFragment"
+        android:label="Đăng nhập">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+        <action
+            android:id="@+id/action_login_to_fp_email"
+            app:destination="@id/fpEmailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.autochat.ui.phone.fragment.RegisterFragment"
+        android:label="Đăng ký">
+        <!-- Sau verify OTP register thành công → về Login (popUpTo xóa stack) -->
+        <action
+            android:id="@+id/action_register_to_otp"
+            app:destination="@id/otpFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <!-- OtpFragment dùng chung: nhận args để biết purpose -->
+    <fragment
+        android:id="@+id/otpFragment"
+        android:name="com.example.autochat.ui.phone.fragment.OtpFragment"
+        android:label="Xác thực OTP">
+        <argument android:name="email"   app:argType="string"/>
+        <!-- purpose: "register" | "reset_password" -->
+        <argument android:name="purpose" app:argType="string"/>
+
+        <!-- Sau register OTP xong → popUpTo loginFragment -->
+        <argument android:name="username" app:argType="string" android:defaultValue=""/>
+        <argument android:name="password" app:argType="string" android:defaultValue=""/>
+        <action
+            android:id="@+id/action_otp_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="false"/>
+        <!-- Sau reset_password OTP xong → sang đặt mật khẩu mới -->
+        <action
+            android:id="@+id/action_otp_to_fp_new_password"
+            app:destination="@id/fpNewPasswordFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/fpEmailFragment"
+        android:name="com.example.autochat.ui.phone.adapter.com.example.autochat.ui.phone.fragment.FpEmailFragment"
+        android:label="@string/btn_forgot_password">
+        <action
+            android:id="@+id/action_fp_email_to_otp"
+            app:destination="@id/otpFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/fpNewPasswordFragment"
+        android:name="com.example.autochat.ui.phone.adapter.com.example.autochat.ui.phone.fragment.FpNewPasswordFragment"
+        android:label="Mật khẩu mới">
+        <argument android:name="email" app:argType="string"/>
+        <argument android:name="resetToken"   app:argType="string"/>
+        <!-- Sau đặt xong → về Login, xóa toàn bộ back stack auth -->
+        <action
+            android:id="@+id/action_fp_new_password_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/nav_auth"
+            app:popUpToInclusive="true"/>
+    </fragment>
+
+</navigation>

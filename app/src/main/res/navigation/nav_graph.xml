@@ -16,8 +16,14 @@
             app:destination="@id/profileFragment"/>
         <action android:id="@+id/action_chat_to_articleDetail"
             app:destination="@id/articleDetailFragment"/>
+        <action
+            android:id="@+id/action_to_setting"
+            app:destination="@id/settingFragment" />
     </fragment>
-
+    <fragment
+        android:id="@+id/settingFragment"
+        android:name="com.example.autochat.ui.phone.fragment.SettingFragment"
+        android:label="Cài đặt" />
     <fragment
         android:id="@+id/historyFragment"
         android:name="com.example.autochat.ui.phone.fragment.HistoryFragment"

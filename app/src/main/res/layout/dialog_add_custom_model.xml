@@ -1,242 +1,487 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    dialog_add_custom_model.xml — THAY THẾ file hiện tại
+    Tái sử dụng cho cả GGUF và ONNX với tab toggle ở đầu.
+    GGUF section: giữ nguyên toàn bộ UI cũ
+    ONNX section: mới, hiện khi chọn tab ONNX
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/bg_dialog"
     android:padding="20dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Thêm Model Tùy Chỉnh"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Thêm model GGUF từ Repo"
-        android:textColor="#888899"
-        android:textSize="12sp"
-        android:layout_marginBottom="20dp" />
-
-
-
-    <!-- Mô tả -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Mô tả (tùy chọn)"
-        android:textColor="#AAAACC"
-        android:textSize="13sp"
-        android:layout_marginBottom="6dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:boxBackgroundColor="#1A1A2E"
-        app:boxStrokeColor="#2A2A40"
-        app:shapeAppearance="@style/RoundedTextInput"
-        app:hintEnabled="false">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etModelDesc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="VD: Model tiếng Việt tùy chỉnh"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#555566"
-            android:padding="14dp"
-            android:maxLines="2"
-            android:background="@android:color/transparent" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- URL -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Link repo (GGUF) trên huggingface hoặc hf-mirror"
-        android:textColor="#AAAACC"
-        android:textSize="13sp"
-        android:layout_marginBottom="6dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
-        app:boxBackgroundColor="#1A1A2E"
-        app:boxStrokeColor="#2A2A40"
-        app:shapeAppearance="@style/RoundedTextInput"
-        app:hintEnabled="false"
-        app:endIconMode="clear_text"
-        app:endIconTint="#555566">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etModelUrl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="https://hf-mirror.com/.../...-GGUF"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#555566"
-            android:padding="14dp"
-            android:inputType="textUri"
-            android:maxLines="1"
-            android:background="@android:color/transparent" />
-    </com.google.android.material.textfield.TextInputLayout>
-    <!-- Sau ô URL, thêm nút kiểm tra repo -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCheckRepo"
-        android:layout_width="wrap_content"
-        android:layout_height="36dp"
-        android:text="Kiểm tra repo"
-        android:textColor="#64B5F6"
-        android:textSize="12sp"
-        app:backgroundTint="@android:color/transparent"
-        app:strokeColor="#2A2A40"
-        app:strokeWidth="1dp"
-        app:cornerRadius="18dp"
-        android:layout_marginBottom="8dp" />
-
-    <!-- File đã chọn -->
-    <!-- File đã chọn + nút x -->
     <LinearLayout
-        android:id="@+id/layoutSelectedFile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone">
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvSelectedFile"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#4CAF50"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/btnClearSelection"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:text="✕"
-            android:textColor="#FF6B6B"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-    </LinearLayout>
-    <ProgressBar
-        android:id="@+id/progressChecking"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"
-        android:indeterminateTint="#64B5F6" />
-    <!-- Danh sách file GGUF -->
-    <LinearLayout
-        android:id="@+id/layoutFileList"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:orientation="vertical"
-        android:visibility="gone">
-
+        <!-- ── Title ── -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Chọn phiên bản:"
-            android:textColor="#AAAACC"
-            android:textSize="12sp"
+            android:text="Thêm Model Tùy Chỉnh"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvFileList"
+        <!-- ── Tab toggle GGUF / ONNX ── -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-    </LinearLayout>
-    <!-- Thông tin thiết bị -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="10dp"
-        android:background="#15152A"
-        android:layout_marginBottom="16dp">
+            android:layout_height="36dp"
+            android:orientation="horizontal"
+            android:background="#1A1A2E"
+            android:padding="3dp"
+            android:layout_marginBottom="16dp">
 
-        <TextView
-            android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tabGguf"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="GGUF"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/bg_tab_selected"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <TextView
+                android:id="@+id/tabOnnx"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="ONNX"
+                android:textColor="#888899"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:background="@drawable/bg_tab_unselected"
+                android:clickable="true"
+                android:focusable="true"/>
+        </LinearLayout>
+
+        <!-- ════════════════════════════════════════════
+             GGUF SECTION (hiện mặc định)
+             ════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/layoutGguf"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="📱 Thiết bị của bạn"
-            android:textColor="#888899"
-            android:textSize="11sp" />
+            android:orientation="vertical"
+            android:visibility="visible">
 
-        <TextView
-            android:id="@+id/tvDeviceInfo"
-            android:layout_width="wrap_content"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thêm model GGUF từ Repo"
+                android:textColor="#888899"
+                android:textSize="12sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Mô tả -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mô tả (tùy chọn)"
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxBackgroundColor="#1A1A2E"
+                app:boxStrokeColor="#2A2A40"
+                app:shapeAppearance="@style/RoundedTextInput"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etModelDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="VD: Model tiếng Việt tùy chỉnh"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555566"
+                    android:padding="14dp"
+                    android:maxLines="2"
+                    android:background="@android:color/transparent" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- URL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Link repo (GGUF) trên HuggingFace hoặc hf-mirror"
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                app:boxBackgroundColor="#1A1A2E"
+                app:boxStrokeColor="#2A2A40"
+                app:shapeAppearance="@style/RoundedTextInput"
+                app:hintEnabled="false"
+                app:endIconMode="clear_text"
+                app:endIconTint="#555566">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etModelUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="https://hf-mirror.com/.../...-GGUF"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555566"
+                    android:padding="14dp"
+                    android:inputType="textUri"
+                    android:maxLines="1"
+                    android:background="@android:color/transparent" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCheckRepo"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Kiểm tra repo"
+                android:textColor="#64B5F6"
+                android:textSize="12sp"
+                app:backgroundTint="@android:color/transparent"
+                app:strokeColor="#2A2A40"
+                app:strokeWidth="1dp"
+                app:cornerRadius="18dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- File đã chọn -->
+            <LinearLayout
+                android:id="@+id/layoutSelectedFile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvSelectedFile"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="#4CAF50"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/btnClearSelection"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:text="✕"
+                    android:textColor="#FF6B6B"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progressChecking"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                android:indeterminateTint="#64B5F6" />
+
+            <!-- Danh sách file GGUF -->
+            <LinearLayout
+                android:id="@+id/layoutFileList"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chọn phiên bản:"
+                    android:textColor="#AAAACC"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvFileList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <!-- Thông tin thiết bị -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="10dp"
+                android:background="#15152A"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📱 Thiết bị của bạn"
+                    android:textColor="#888899"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvDeviceInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="RAM: 4GB | Android 14"
+                    android:textColor="#64B5F6"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Cảnh báo -->
+            <LinearLayout
+                android:id="@+id/layoutWarning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:background="#1A1A00"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="⚠️ Model lớn hơn RAM khả dụng, có thể crash!"
+                    android:textColor="#FF9800"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ════════════════════════════════════════════
+             ONNX SECTION (ẩn mặc định)
+             ════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/layoutOnnx"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="RAM: 4GB | Android 14"
-            android:textColor="#64B5F6"
-            android:textSize="11sp" />
-    </LinearLayout>
+            android:orientation="vertical"
+            android:visibility="gone">
 
-    <!-- Cảnh báo -->
-    <LinearLayout
-        android:id="@+id/layoutWarning"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="10dp"
-        android:background="#1A1A00"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thêm model ONNX từ HuggingFace"
+                android:textColor="#888899"
+                android:textSize="12sp"
+                android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:layout_width="0dp"
+            <!-- ONNX URL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HuggingFace Repo URL"
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                app:boxBackgroundColor="#1A1A2E"
+                app:boxStrokeColor="#2A2A40"
+                app:shapeAppearance="@style/RoundedTextInput"
+                app:hintEnabled="false"
+                app:endIconMode="clear_text"
+                app:endIconTint="#555566">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etOnnxUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="https://huggingface.co/microsoft/Phi-3-mini-onnx"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555566"
+                    android:padding="14dp"
+                    android:inputType="textUri"
+                    android:maxLines="1"
+                    android:background="@android:color/transparent" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCheckOnnxRepo"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="🔍 Kiểm tra repo"
+                android:textColor="#A78BFA"
+                android:textSize="12sp"
+                app:backgroundTint="@android:color/transparent"
+                app:strokeColor="#3333AA"
+                app:strokeWidth="1dp"
+                app:cornerRadius="18dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- ONNX Progress -->
+            <ProgressBar
+                android:id="@+id/progressOnnxChecking"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                android:indeterminateTint="#A78BFA" />
+
+            <!-- ONNX Error -->
+            <TextView
+                android:id="@+id/tvOnnxError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FF6666"
+                android:textSize="12sp"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- ONNX File list header -->
+            <TextView
+                android:id="@+id/tvOnnxFileHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Chọn file cần tải (⚡ = bắt buộc):"
+                android:textColor="#AAAACC"
+                android:textSize="12sp"
+                android:visibility="gone"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- ONNX File checkboxes — filled dynamically -->
+            <LinearLayout
+                android:id="@+id/layoutOnnxFiles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:background="#15152A"
+                android:padding="8dp"
+                android:layout_marginBottom="4dp"/>
+
+            <!-- ONNX Total size -->
+            <TextView
+                android:id="@+id/tvOnnxTotalSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#888899"
+                android:textSize="11sp"
+                android:visibility="gone"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2A2A40"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- ONNX Model name -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tên model (tùy chọn)"
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:boxBackgroundColor="#1A1A2E"
+                app:boxStrokeColor="#2A2A40"
+                app:shapeAppearance="@style/RoundedTextInput"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etOnnxName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="VD: Phi-3 Mini ONNX"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555566"
+                    android:padding="14dp"
+                    android:background="@android:color/transparent" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ONNX Description -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mô tả (tùy chọn)"
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:boxBackgroundColor="#1A1A2E"
+                app:boxStrokeColor="#2A2A40"
+                app:shapeAppearance="@style/RoundedTextInput"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etOnnxDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="VD: Model nhỏ gọn, chạy nhanh trên mobile"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555566"
+                    android:padding="14dp"
+                    android:maxLines="2"
+                    android:background="@android:color/transparent" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <!-- ── Buttons (dùng chung cho cả 2 tab) ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="⚠️ Model lớn hơn RAM khả dụng, có thể crash!"
-            android:textColor="#FF9800"
-            android:textSize="11sp" />
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancel"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Hủy"
+                android:textColor="#AAAACC"
+                app:backgroundTint="@android:color/transparent"
+                app:cornerRadius="22dp"
+                style="@style/Widget.Material3.Button.TextButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAdd"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:text="Thêm model"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#6C63FF"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_add"
+                app:iconSize="18dp" />
+        </LinearLayout>
+
     </LinearLayout>
-
-    <!-- Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancel"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:text="Hủy"
-            android:textColor="#AAAACC"
-            app:backgroundTint="@android:color/transparent"
-            app:cornerRadius="22dp"
-            style="@style/Widget.Material3.Button.TextButton" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAdd"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:text="Thêm model"
-            android:textColor="#FFFFFF"
-            app:backgroundTint="#6C63FF"
-            app:cornerRadius="22dp"
-            app:icon="@drawable/ic_add"
-            app:iconSize="18dp" />
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

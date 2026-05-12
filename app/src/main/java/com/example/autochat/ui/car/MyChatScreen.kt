@@ -800,12 +800,13 @@ class MyChatScreen(carContext: CarContext) : Screen(carContext), TextToSpeech.On
             } catch (e: Exception) {
                 android.util.Log.e("CHAT", "sendMessageOnly online failed: ${e.message}")
 
-                val llmEngine = EntryPointAccessors.fromApplication(
+                val factory = EntryPointAccessors.fromApplication(
                     carContext.applicationContext,
                     ChatEntryPoint::class.java
-                ).llmEngine()
+                ).llmEngineFactory()
+                val llmEngine = factory.getActiveEngine()
 
-                if (llmEngine.isLoaded()) {
+                if (llmEngine != null && llmEngine.isLoaded()) {
                     val offlineResult = chatRepository.sendOfflineMessage(
                         sessionId = existingSessionId,
                         content   = text,

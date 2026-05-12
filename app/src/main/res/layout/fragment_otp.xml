@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/bgApp">
+
+    <!-- Toolbar -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp">
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back"
+            android:padding="12dp"/>
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="28dp"
+            android:paddingBottom="32dp"
+            android:gravity="center_horizontal">
+
+            <!-- Icon -->
+            <TextView
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:text="✉️"
+                android:textSize="38sp"
+                android:gravity="center"
+                android:background="@drawable/bg_icon_circle"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"/>
+
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nhập mã xác thực"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="?attr/textPrimary"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="?attr/textSecondary"
+                android:gravity="center"
+                android:layout_marginBottom="36dp"/>
+
+            <!-- 6 OTP boxes -->
+            <LinearLayout
+                android:id="@+id/otpContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
+
+                <EditText android:id="@+id/otp1" style="@style/OtpBoxStyle" android:layout_marginEnd="10dp"/>
+                <EditText android:id="@+id/otp2" style="@style/OtpBoxStyle" android:layout_marginEnd="10dp"/>
+                <EditText android:id="@+id/otp3" style="@style/OtpBoxStyle" android:layout_marginEnd="10dp"/>
+                <EditText android:id="@+id/otp4" style="@style/OtpBoxStyle" android:layout_marginEnd="10dp"/>
+                <EditText android:id="@+id/otp5" style="@style/OtpBoxStyle" android:layout_marginEnd="10dp"/>
+                <EditText android:id="@+id/otp6" style="@style/OtpBoxStyle"/>
+
+            </LinearLayout>
+
+            <!-- Clipboard hint -->
+            <TextView
+                android:id="@+id/tvPasteHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋  Dán mã từ clipboard"
+                android:textSize="13sp"
+                android:textColor="?attr/colorBrand"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_paste_hint"
+                android:visibility="gone"/>
+
+            <!-- Countdown -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="28dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mã hết hạn sau "
+                    android:textSize="13sp"
+                    android:textColor="?attr/textSecondary"/>
+
+                <TextView
+                    android:id="@+id/tvCountdown"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="03:00"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorBrand"/>
+            </LinearLayout>
+
+            <!-- Error -->
+            <TextView
+                android:id="@+id/tvError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorDanger"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:visibility="gone"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_error"/>
+
+            <!-- Verify button -->
+            <Button
+                android:id="@+id/btnVerify"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:text="Xác nhận"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="?attr/iconColorOnBrand"
+                android:backgroundTint="?attr/colorBrand"
+                android:stateListAnimator="@null"
+                android:layout_marginBottom="20dp"
+                app:cornerRadius="12dp"/>
+
+            <!-- Resend -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Không nhận được mã? "
+                    android:textSize="13sp"
+                    android:textColor="?attr/textSecondary"/>
+
+                <TextView
+                    android:id="@+id/tvResend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gửi lại"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:padding="4dp"/>
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                android:indeterminateTint="?attr/colorBrand"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

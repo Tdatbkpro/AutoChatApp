@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="#0A0A0F">
+    android:background="?attr/bgApp">
 
     <!-- Toolbar -->
     <LinearLayout
@@ -14,7 +14,7 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:gravity="center_vertical"
-        android:background="#12121A"
+        android:background="?attr/bgSurface"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -26,7 +26,7 @@
             android:src="@drawable/ic_menu"
             android:background="?android:selectableItemBackgroundBorderless"
             android:padding="8dp"
-            app:tint="#AAAACC"/>
+            app:tint="?attr/iconColorSecondary"/>
 
         <LinearLayout
             android:id="@+id/btnModelStatus"
@@ -46,7 +46,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_ai_model"
-                app:tint="#4A90E2"
+                app:tint="?attr/colorInfo"
                 android:layout_marginEnd="6dp"/>
 
             <TextView
@@ -54,7 +54,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Chọn model"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/textPrimary"
                 android:textSize="13sp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
@@ -63,7 +63,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_chevron_down"
-                app:tint="#888899"
+                app:tint="?attr/iconColorSecondary"
                 android:layout_marginStart="4dp"/>
         </LinearLayout>
 
@@ -73,7 +73,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Chat mới"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="15sp"
             android:textStyle="normal"
             android:maxLines="2"
@@ -88,7 +88,87 @@
             android:src="@drawable/ic_add_message"
             android:background="?android:selectableItemBackgroundBorderless"
             android:padding="8dp"
-            app:tint="#31B1BD"/>
+            app:tint="?attr/colorTeal"/>
+    </LinearLayout>
+
+    <!-- Audio Player Bar — ẩn mặc định -->
+    <LinearLayout
+        android:id="@+id/audioPlayerBar"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:background="?attr/colorPlayerBar"
+        android:visibility="gone"
+        android:elevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnPlayerPlay"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_play"
+            android:background="@drawable/bg_circle_blue"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="Phát/Tạm dừng" />
+
+        <TextView
+            android:id="@+id/tvPlayerCurrent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="?attr/colorPlayerText"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="6dp" />
+
+        <com.example.autochat.ui.phone.view.WaveformView
+            android:id="@+id/waveformView"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:paddingVertical="2dp" />
+
+        <TextView
+            android:id="@+id/tvPlayerDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="?attr/colorPlayerText"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="10dp" />
+
+        <TextView
+            android:id="@+id/tvPlayerLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VieNeu TTS"
+            android:textColor="?attr/textSecondary"
+            android:textSize="11sp"
+            android:maxWidth="64dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:background="@drawable/bg_label_chip"
+            android:layout_marginEnd="8dp" />
+
+        <ImageButton
+            android:id="@+id/btnPlayerClose"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_close"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:alpha="0.7"
+            android:contentDescription="Đóng"
+            app:tint="?attr/iconColorSecondary" />
     </LinearLayout>
 
     <!-- Connection status bar -->
@@ -96,13 +176,13 @@
         android:id="@+id/tvConnectionStatus"
         android:layout_width="0dp"
         android:layout_height="24dp"
-        android:background="#1A3A5C"
+        android:background="?attr/bgCircleBlue"
         android:text="Đang kết nối lại..."
-        android:textColor="#4A90E2"
+        android:textColor="?attr/colorInfo"
         android:textSize="11sp"
         android:gravity="center"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/audioPlayerBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible"/>
@@ -113,7 +193,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:visibility="gone"
-        android:indeterminateTint="#4A90E2"
+        android:indeterminateTint="?attr/colorInfo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -146,7 +226,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Đang nhập..."
-            android:textColor="#888899"
+            android:textColor="?attr/textSecondary"
             android:textSize="12sp"
             android:layout_marginStart="4dp"/>
     </LinearLayout>
@@ -160,8 +240,8 @@
         android:clipToPadding="false"
         android:scrollbars="none"
         android:overScrollMode="always"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintBottom_toTopOf="@id/inputLayout"
+        app:layout_constraintTop_toBottomOf="@id/audioPlayerBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -193,7 +273,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Chưa có tin nhắn nào"
-            android:textColor="#AAAACC"
+            android:textColor="?attr/textSecondary"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
@@ -202,7 +282,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Hãy bắt đầu trò chuyện với AI"
-            android:textColor="#666"
+            android:textColor="?attr/textHint"
             android:textSize="13sp"/>
     </LinearLayout>
 
@@ -242,6 +322,18 @@
                     android:layout_height="14dp"
                     android:background="@drawable/bg_skeleton"
                     android:layout_marginBottom="8dp"/>
+
+                <View
+                    android:layout_width="220dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton"
+                    android:layout_marginBottom="6dp"/>
+
+                <View
+                    android:layout_width="160dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/bg_skeleton"
+                    android:layout_marginBottom="6dp"/>
 
                 <View
                     android:layout_width="220dp"
@@ -339,7 +431,7 @@
         android:visibility="gone"
         android:elevation="6dp"
         android:translationZ="6dp"
-        app:tint="#FFFFFF"
+        app:tint="?attr/iconColorOnBrand"
         app:layout_constraintBottom_toTopOf="@id/inputLayout"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginEnd="16dp"
@@ -357,23 +449,35 @@
         android:paddingHorizontal="10dp"
         android:paddingVertical="8dp"
         android:gravity="center_vertical"
-        android:background="#0D0D14"
+        android:background="?attr/bgApp"
         android:elevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Mic button -->
-        <ImageButton
-            android:id="@+id/btnMic"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:src="@drawable/ic_mic"
-            android:background="@drawable/bg_circle_dark"
-            android:layout_marginEnd="6dp"
-            android:elevation="2dp" />
+        <!-- Mic + Wave wrapper -->
+        <FrameLayout
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="6dp">
 
-        <!-- ✅ Endpoint Selector Pill Button -->
+            <ImageButton
+                android:id="@+id/btnMic"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_mic"
+                android:background="@drawable/bg_circle_dark"
+                android:elevation="2dp" />
+
+            <com.example.autochat.ui.phone.view.MicWaveView
+                android:id="@+id/micWaveView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="invisible"/>
+        </FrameLayout>
+
+        <!-- Endpoint Selector Pill Button -->
         <FrameLayout
             android:id="@+id/btnEndpoint"
             android:layout_width="wrap_content"
@@ -386,21 +490,19 @@
             android:gravity="center"
             android:elevation="2dp">
 
-            <!-- "outgoing" label — slides out upward on switch -->
             <TextView
                 android:id="@+id/tvEndpointOut"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:paddingHorizontal="8dp"
-                android:textColor="#AAAACC"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.05"
                 android:visibility="invisible"
                 tools:text="NEWS"/>
 
-            <!-- "incoming" label — current, slides in from below -->
             <TextView
                 android:id="@+id/tvEndpointLabel"
                 android:layout_width="wrap_content"
@@ -408,28 +510,20 @@
                 android:layout_gravity="center"
                 android:paddingHorizontal="8dp"
                 android:text="NEWS"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/textPrimary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.05"/>
-
         </FrameLayout>
 
         <!-- Text Input -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilMessage"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            style="@style/ChatInputStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            app:boxStrokeWidth="1dp"
-            app:boxStrokeColor="#2A2A3E"
-            app:boxCornerRadiusTopStart="24dp"
-            app:boxCornerRadiusTopEnd="24dp"
-            app:boxCornerRadiusBottomStart="24dp"
-            app:boxCornerRadiusBottomEnd="24dp"
-            app:boxBackgroundColor="#1A1A2E"
             app:hintEnabled="false">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -437,15 +531,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Nhập tin nhắn..."
-                android:textColor="#FFFFFF"
-                android:textColorHint="#555566"
+                android:textColor="?attr/textPrimary"
+                android:textColorHint="?attr/textHint2"
                 android:maxLines="4"
                 android:inputType="textMultiLine"
                 android:imeOptions="actionSend"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="10dp"
                 android:lineSpacingMultiplier="1.2"
-                android:background="@android:color/transparent" />
+                android:background="?attr/bgInput" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Toggle Online/Offline -->
@@ -459,7 +553,7 @@
             android:elevation="2dp"
             android:visibility="gone"
             android:contentDescription="Chuyển chế độ Online/Offline"
-            app:tint="#4CAF50" />
+            app:tint="?attr/colorSuccess" />
 
         <!-- Send/Pause button -->
         <ImageButton
@@ -472,6 +566,7 @@
             android:alpha="0.4"
             android:enabled="false" />
     </LinearLayout>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnShowUserMessages"
         android:layout_width="wrap_content"
@@ -480,9 +575,10 @@
         android:contentDescription="Xem tin nhắn đã gửi"
         android:src="@drawable/ic_message_history"
         android:visibility="gone"
-        app:backgroundTint="#4A90E2"
+        app:backgroundTint="?attr/colorInfo"
         app:fabSize="normal"
-        app:rippleColor="#80FFFFFF"
-        app:tint="#FFFFFF"
+        app:rippleColor="?attr/rippleColor"
+        app:tint="?attr/iconColorOnBrand"
         tools:ignore="MissingConstraints" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

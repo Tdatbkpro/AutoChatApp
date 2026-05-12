@@ -73,7 +73,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Storage info -->
+        <!-- Storage info + action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -91,11 +91,12 @@
                 android:textColor="#888899"
                 android:textSize="11sp" />
 
+            <!-- Nút thêm GGUF (giữ nguyên) -->
             <TextView
                 android:id="@+id/btnAddCustom"
                 android:layout_width="wrap_content"
                 android:layout_height="28dp"
-                android:text="+ Thêm model"
+                android:text="+ GGUF"
                 android:textColor="#64B5F6"
                 android:textSize="11sp"
                 android:gravity="center"
@@ -103,6 +104,22 @@
                 android:background="@drawable/bg_chip_category"
                 android:clickable="true"
                 android:focusable="true" />
+
+            <!-- Nút thêm ONNX (mới) -->
+            <TextView
+                android:id="@+id/btnAddOnnx"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:text="+ ONNX"
+                android:textColor="#A78BFA"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_chip_category"
+                android:clickable="true"
+                android:focusable="true" />
+
         </LinearLayout>
 
         <!-- RecyclerView -->
@@ -116,18 +133,5 @@
             android:scrollbars="none" />
 
     </LinearLayout>
-
-<!--    &lt;!&ndash; FAB nổi lên trên &ndash;&gt;-->
-<!--    <com.google.android.material.floatingactionbutton.FloatingActionButton-->
-<!--        android:id="@+id/fabAddModel"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_gravity="bottom|end"-->
-<!--        android:layout_margin="20dp"-->
-<!--        android:src="@drawable/ic_add"-->
-<!--        app:backgroundTint="#6C63FF"-->
-<!--        app:tint="#FFFFFF"-->
-<!--        app:elevation="6dp"-->
-<!--        app:borderWidth="0dp" />-->
 
 </FrameLayout>

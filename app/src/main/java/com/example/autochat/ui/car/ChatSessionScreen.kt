@@ -42,52 +42,21 @@ class ChatSessionScreen(
     private var observeJob: Job? = null
     private var isObserving = false
 
+    // Messages từ DB
     private val dbMessages = mutableListOf<Message>()
-    private val pendingMessages = mutableListOf<Message>()
+
+    // Trạng thái chờ bot
     private var isWaitingBot = false
-
-    // Snapshot của DB messages tại thời điểm gửi — để detect user msg mới đã vào DB
+    private var botCountWhenSent = 0
     private var pendingUserText: String? = null
-
-
-    // Sửa displayMessages:
-    private val displayMessages: List<Message> get() {
-        val result = mutableListOf<Message>()
-        result.addAll(dbMessages)
-        for (pending in pendingMessages) {
-            if (pending.id.contains("pending_user")) {
-                val alreadyInDb = dbMessages.any {
-                    it.sender == "user" && it.content == pending.content
-                }
-                android.util.Log.d("TYPING", "pending_user '${pending.content.take(20)}' alreadyInDb=$alreadyInDb")
-                if (!alreadyInDb) result.add(pending)
-            } else {
-                result.add(pending)
-            }
-        }
-        return result.sortedBy { it.timestamp }
-    }
 
     init {
         AppState.currentEndpoint = endpoint
 
         if (pendingMessage != null) {
             isWaitingBot = true
-            val now = System.currentTimeMillis()
-            pendingMessages.add(Message(
-                id = "pending_user_init",
-                sessionId = sessionId,
-                content = pendingMessage,
-                sender = "user",
-                timestamp = now
-            ))
-            pendingMessages.add(Message(
-                id = "pending_bot_init",
-                sessionId = sessionId,
-                content = "⏳ AI đang trả lời...",
-                sender = "bot",
-                timestamp = now + 1
-            ))
+            botCountWhenSent = 0
+            pendingUserText = pendingMessage
         }
 
         lifecycle.addObserver(object : DefaultLifecycleObserver {
@@ -100,21 +69,17 @@ class ChatSessionScreen(
 
             override fun onResume(owner: LifecycleOwner) {
                 AppState.currentEndpoint = endpoint
-                if (!sessionId.startsWith("pending_")) {
+                if (!sessionId.startsWith("pending_") && !isObserving) {
                     startObserving()
                 }
-                // Khi quay lại screen (sau VoiceSearchScreen pop), re-render ngay
                 invalidate()
-            }
-
-            override fun onStop(owner: LifecycleOwner) {
-                stopObserving()
             }
 
             override fun onDestroy(owner: LifecycleOwner) {
                 if (chatScreen.currentChatSessionScreen === this@ChatSessionScreen) {
                     chatScreen.currentChatSessionScreen = null
                 }
+                stopObserving()
                 scope.cancel()
             }
         })
@@ -123,41 +88,18 @@ class ChatSessionScreen(
     private fun startObserving() {
         if (isObserving) return
         isObserving = true
-        android.util.Log.d("ChatSessionScreen", "startObserving: $sessionId")
 
         observeJob?.cancel()
         observeJob = scope.launch {
             chatRepository.getMessagesFlow(sessionId).collect { list ->
                 withContext(Dispatchers.Main) {
-                    android.util.Log.d("ChatSessionScreen",
-                        "DB update: ${list.size} messages, isWaiting=$isWaitingBot")
-
-                    val previousDbSize = dbMessages.size
                     dbMessages.clear()
                     dbMessages.addAll(list)
 
-                    // Trong startObserving(), thay toàn bộ đoạn xử lý isWaitingBot:
-
-                    // Trong startObserving(), thay đoạn isWaitingBot:
                     if (isWaitingBot) {
-                        val hasRealBotMsg = list.any {
-                            it.sender == "bot" && !it.id.startsWith("pending_")
-                        }
-
-                        android.util.Log.d("TYPING", "hasRealBotMsg=$hasRealBotMsg, listSize=${list.size}, pendingSize=${pendingMessages.size}")
-
-                        if (hasRealBotMsg) {
-                            pendingMessages.removeAll { it.id.contains("pending_bot") }
+                        val newBotCount = list.count { it.sender == "bot" }
+                        if (newBotCount > botCountWhenSent) {
                             isWaitingBot = false
-                        }
-
-                        val hasRealUserMsg = list.any {
-                            it.sender == "user" &&
-                                    !it.id.startsWith("pending_") &&
-                                    it.content == pendingUserText
-                        }
-                        if (hasRealUserMsg) {
-                            pendingMessages.removeAll { it.id.contains("pending_user") }
                             pendingUserText = null
                         }
                     }
@@ -169,64 +111,34 @@ class ChatSessionScreen(
     }
 
     private fun stopObserving() {
-        android.util.Log.d("ChatSessionScreen", "stopObserving")
         observeJob?.cancel()
         observeJob = null
         isObserving = false
     }
 
-    /**
-     * Gọi từ VoiceSearchScreen (hoặc bất kỳ nơi nào) khi user vừa gửi tin nhắn mới.
-     * Hiện pending user + pending bot spinner ngay lập tức.
-     */
     fun addPendingMessage(text: String) {
-        android.util.Log.d("ChatSessionScreen", "addPendingMessage: $text")
-        android.util.Log.d("TYPING", "addPendingMessage: $text")
-        val now = System.currentTimeMillis()
-        isWaitingBot = true
+        botCountWhenSent = dbMessages.count { it.sender == "bot" }
         pendingUserText = text
-
-        pendingMessages.clear()
-        pendingMessages.add(Message(
-            id = "pending_user_$now",
-            sessionId = sessionId,
-            content = text,
-            sender = "user",
-            timestamp = now
-        ))
-        pendingMessages.add(Message(
-            id = "pending_bot_$now",
-            sessionId = sessionId,
-            content = "⏳ AI đang trả lời...",
-            sender = "bot",
-            timestamp = now + 1
-        ))
-
-        // QUAN TRỌNG: Đảm bảo đang observe để nhận DB updates
-        if (!sessionId.startsWith("pending_") && !isObserving) {
-            startObserving()
-        }
+        isWaitingBot = true
         invalidate()
     }
 
-    /**
-     * Gọi khi session mới được tạo (lần đầu chat) và bot đã reply.
-     */
     fun onSessionReady(realSessionId: String, botMessage: Message) {
-        android.util.Log.d("ChatSessionScreen", "onSessionReady: $realSessionId")
-
         val wasPlaceholder = sessionId.startsWith("pending_")
         sessionId = realSessionId
-        isWaitingBot = true
 
         if (wasPlaceholder) {
             AppState.currentSession = AppState.currentSession?.copy(id = realSessionId)
+            botCountWhenSent = 0
+            isObserving = false
+            observeJob?.cancel()
+            startObserving()
+        } else {
+            // Hỏi tiếp: bot đã reply rồi, tắt spinner luôn
+            isWaitingBot = false
+            pendingUserText = null
+            invalidate()
         }
-
-        // ✅ Force restart observing với sessionId mới
-        isObserving = false  // reset để startObserving chạy được
-        observeJob?.cancel()
-        startObserving()
 
         val type = botMessage.extraData?.get("type") as? String
         when (type) {
@@ -246,6 +158,8 @@ class ChatSessionScreen(
                 }
             }
             else -> {
+                isWaitingBot = false
+                pendingUserText = null
                 invalidate()
                 chatScreen.speakText(botMessage.content)
             }
@@ -253,48 +167,17 @@ class ChatSessionScreen(
     }
 
     override fun onGetTemplate(): Template {
-        android.util.Log.d("ChatSessionScreen", """
-            onGetTemplate:
-            - dbMessages: ${dbMessages.size}
-            - pendingMessages: ${pendingMessages.size}
-            - displayMessages: ${displayMessages.size}
-            - isWaitingBot: $isWaitingBot
-        """.trimIndent())
-
         val listBuilder = ItemList.Builder()
         val endpointLabel = if (endpoint == "ask") "💬 Chat" else "📰 Tin tức"
-        val msgs = displayMessages
 
-        if (msgs.isEmpty()) {
+        if (dbMessages.isEmpty() && !isWaitingBot) {
             listBuilder.setNoItemsMessage("Chưa có tin nhắn nào")
         }
 
-        // Ưu tiên: lấy db messages mới nhất + toàn bộ pending
-        val dbPart = msgs.filter { !it.id.startsWith("pending_") }.takeLast(6)
-        val pendingPart = msgs.filter { it.id.startsWith("pending_") }
-        val toShow = (dbPart + pendingPart).takeLast(6)
-
-        toShow.forEach { msg ->
+        // Hiện DB messages
+        dbMessages.takeLast(6).forEach { msg ->
             val time = formatTime(msg.timestamp)
             when {
-                msg.id.startsWith("pending_user") -> {
-                    listBuilder.addItem(
-                        Row.Builder()
-                            .setTitle("👤 Bạn · $time")
-                            .addText(msg.content.take(100))
-                            .build()
-                    )
-                }
-
-                msg.id.startsWith("pending_bot") -> {
-                    listBuilder.addItem(
-                        Row.Builder()
-                            .setTitle("🤖 AI đang xử lý...")
-                            .addText("⏳ Vui lòng chờ trong giây lát")
-                            .build()
-                    )
-                }
-
                 msg.sender == "bot" -> {
                     val hasNews = (msg.extraData?.get("type") as? String) == "news_list"
                     if (hasNews) {
@@ -333,7 +216,6 @@ class ChatSessionScreen(
                         )
                     }
                 }
-
                 else -> {
                     listBuilder.addItem(
                         Row.Builder()
@@ -345,25 +227,52 @@ class ChatSessionScreen(
             }
         }
 
-        val actionStrip = ActionStrip.Builder()
-            .addAction(
+        // Hiện temp messages ở cuối khi đang chờ bot
+        if (isWaitingBot) {
+            // User temp — chỉ hiện nếu chưa có trong DB
+            pendingUserText?.let { text ->
+                val alreadyInDb = dbMessages.any { it.sender == "user" && it.content == text }
+                if (!alreadyInDb) {
+                    listBuilder.addItem(
+                        Row.Builder()
+                            .setTitle("👤 Bạn")
+                            .addText(text.take(100))
+                            .build()
+                    )
+                }
+            }
+            // Bot spinner
+            listBuilder.addItem(
+                Row.Builder()
+                    .setTitle("🤖 AI đang xử lý...")
+                    .addText("⏳ Vui lòng chờ trong giây lát")
+                    .build()
+            )
+        }
+
+        val actionStripBuilder = ActionStrip.Builder()
+
+        if (!isWaitingBot) {
+            actionStripBuilder.addAction(
                 Action.Builder()
                     .setTitle("🎤 Hỏi tiếp")
                     .setOnClickListener { openVoice() }
                     .build()
             )
-            .addAction(
-                Action.Builder()
-                    .setIcon(CarIcon.Builder(
+        }
+
+        actionStripBuilder.addAction(
+            Action.Builder()
+                .setIcon(
+                    CarIcon.Builder(
                         IconCompat.createWithResource(carContext, R.drawable.ic_home)
-                    ).build())
-                    .setOnClickListener {
-                        // ✅ Về HomeScreen thay vì HistoryScreen
-                        screenManager.popToRoot()
-                    }
-                    .build()
-            )
-            .build()
+                    ).build()
+                )
+                .setOnClickListener { screenManager.popToRoot() }
+                .build()
+        )
+
+        val actionStrip = actionStripBuilder.build()
 
         val title = buildString {
             append(endpointLabel)
@@ -379,6 +288,7 @@ class ChatSessionScreen(
     }
 
     private fun openVoice() {
+        chatScreen.currentChatSessionScreen = this
         screenManager.push(
             VoiceSearchScreen(
                 carContext = carContext,
@@ -394,18 +304,26 @@ class ChatSessionScreen(
                 MessageTemplate.Builder("Bạn có muốn chỉ đường đến\n\"$displayName\" không?")
                     .setTitle("🗺️ Chỉ đường")
                     .setHeaderAction(Action.BACK)
-                    .addAction(Action.Builder().setTitle("✅ Có")
-                        .setOnClickListener {
-                            screenManager.pop()
-                            chatScreen.navigateTo(navQuery, displayName)
-                        }.build())
-                    .addAction(Action.Builder().setTitle("❌ Không")
-                        .setOnClickListener { screenManager.pop() }.build())
+                    .addAction(
+                        Action.Builder().setTitle("✅ Có")
+                            .setOnClickListener {
+                                screenManager.pop()
+                                chatScreen.navigateTo(navQuery, displayName)
+                            }.build()
+                    )
+                    .addAction(
+                        Action.Builder().setTitle("❌ Không")
+                            .setOnClickListener { screenManager.pop() }.build()
+                    )
                     .build()
         })
     }
 
     private fun formatTime(ts: Long) = try {
-        SimpleDateFormat("HH:mm", Locale("vi")).format(Date(ts))
-    } catch (_: Exception) { "--:--" }
+        val sdf = SimpleDateFormat("HH:mm", Locale("vi"))
+        sdf.timeZone = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
+        sdf.format(Date(ts))
+    } catch (_: Exception) {
+        "--:--"
+    }
 }

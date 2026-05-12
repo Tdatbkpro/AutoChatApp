@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="0dp"
+    android:paddingBottom="8dp">
+
+    <!-- Top bar with back button -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            style="@style/ImageButton"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/back"
+            android:padding="8dp"
+            app:tint="?attr/textPrimary"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/settings"
+            android:textColor="?attr/textPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+    </FrameLayout>
+
+    <!-- Centered Avatar + Name -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp">
+
+        <!-- Avatar circle -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp">
+
+            <TextView
+                android:id="@+id/tvAvatarLetter"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:textSize="30sp"
+                android:textStyle="bold"
+                android:textColor="?attr/textPrimary" />
+
+            <!-- Edit icon badge -->
+            <FrameLayout
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/bg_badge">
+
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_edit"
+                    android:tint="?attr/textPrimary"
+                    tools:ignore="UseAppTint" />
+
+            </FrameLayout>
+
+        </FrameLayout>
+
+        <!-- Username -->
+        <TextView
+            android:id="@+id/tvHeaderUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="?attr/textPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</LinearLayout>

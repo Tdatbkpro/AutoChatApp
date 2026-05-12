@@ -1,10 +1,239 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════╗
+    ║  AutoChat · COLOR PALETTE                               ║
+    ║  Đây là màu thô (raw palette).                         ║
+    ║  KHÔNG dùng trực tiếp trong layout/drawable.           ║
+    ║  Dùng qua ?attr/ hoặc @color/semantic_* trong themes.  ║
+    ╚══════════════════════════════════════════════════════════╝
+-->
 <resources>
+
+    <!-- ════════════════════════════════
+         NEUTRALS
+         ════════════════════════════════ -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="background">#F5F5F5</color>
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
-    <color name="divider">#E0E0E0</color>
-    <color name="pin_text">#2196F3</color>
+    <color name="transparent">#00000000</color>
+
+
+    <!-- ════════════════════════════════
+         BRAND PALETTE
+         ════════════════════════════════ -->
+    <!-- Primary brand: Electric Indigo -->
+    <color name="brand_purple">#6C63FF</color>
+    <color name="brand_purple_dark">#4E46CC</color>       <!-- pressed / darker state -->
+    <color name="brand_purple_light">#8B85FF</color>      <!-- hover / lighter state -->
+    <color name="brand_purple_muted">#1A1A7A</color>      <!-- dark surface tint -->
+    <color name="brand_purple_alpha_15">#266C63FF</color> <!-- 15% alpha overlay -->
+    <color name="brand_purple_alpha_20">#336C63FF</color> <!-- 20% alpha overlay -->
+    <color name="brand_purple_alpha_30">#4D6C63FF</color> <!-- 30% alpha overlay -->
+
+    <!-- Secondary accent: Teal (TTS / voice) -->
+    <color name="teal_primary">#31B1BD</color>
+    <color name="teal_dark">#1A8A96</color>
+    <color name="teal_light">#5DCACD</color>
+    <color name="teal_bg_dark">#0D2A2E</color>
+    <color name="teal_stroke_dark">#4D31B1BD</color>
+
+    <!-- Info blue (links, pins) -->
+    <color name="accent_blue">#4A90E2</color>
+    <color name="accent_blue_dark">#2196F3</color>
+
+
+    <!-- ════════════════════════════════
+         DARK SURFACE PALETTE  (night mode)
+         ════════════════════════════════ -->
+    <!-- Backgrounds – elevation staircase (darker → lighter) -->
+    <color name="dark_bg_app">#0D1117</color>           <!-- root screen bg -->
+    <color name="dark_bg_surface">#12121A</color>        <!-- toolbar, bottom bar -->
+    <color name="dark_bg_card">#161B22</color>           <!-- list item, card -->
+    <color name="dark_bg_elevated">#1A1A2E</color>       <!-- dialog, bottom-sheet -->
+    <color name="dark_bg_ai_bubble">#1A2035</color>      <!-- AI chat bubble -->
+    <color name="dark_bg_code">#111826</color>           <!-- code block -->
+
+    <!-- Input / form -->
+    <color name="dark_input_box">#1A1A2E</color>
+    <color name="dark_input_stroke">#3A3A5E</color>
+    <color name="dark_input_stroke_focused">#6C63FF</color>
+
+    <!-- Chips / tags -->
+    <color name="dark_chip_fill">#1E3A5F</color>
+    <color name="dark_chip_stroke">#2A4A7F</color>
+
+    <!-- Button fills -->
+    <color name="dark_button_fill">#1A3A5C</color>
+    <color name="dark_button_ghost">#1A1A2E</color>
+
+    <!-- Strokes / dividers -->
+    <color name="dark_stroke">#30363D</color>
+    <color name="dark_stroke_blue">#1E3A5F</color>
+    <color name="dark_stroke_blue2">#2A5A8C</color>
+    <color name="dark_divider">#252533</color>
+
+    <!-- Text -->
+    <color name="dark_text_primary">#F0F0F8</color>
+    <color name="dark_text_secondary">#8B8BA7</color>
+    <color name="dark_text_hint">#6B6B8A</color>
+    <color name="dark_text_on_brand">#FFFFFF</color>
+    <color name="dark_text_ai_label">#9D99FF</color>     <!-- "Auto Chat" label in bubble -->
+
+    <!-- Ripple / overlay -->
+    <color name="dark_ripple">#30363D</color>
+    <color name="dark_scrim">#80000000</color>           <!-- 50% black overlay -->
+
+    <!-- Player bar -->
+    <color name="dark_player_bar">#1A1A2E</color>
+    <color name="dark_player_bar_end">#2D1B4E</color>
+    <color name="dark_player_text">#E0E0F0</color>
+
+    <!-- Settings sections -->
+    <color name="dark_setting_header">#1A1A2E</color>
+    <color name="dark_setting_item">#161B22</color>
+    <color name="dark_setting_section">#0D1117</color>
+
+    <!-- Engine / TTS cards -->
+    <color name="dark_engine_card">#1A1A2E</color>
+    <color name="dark_engine_card_active">#0D2A2E</color>
+    <color name="dark_engine_card_stroke">#2A2A3E</color>
+    <color name="dark_tab_container">#0D0D14</color>
+    <color name="dark_tab_active">#1A1A2E</color>
+    <color name="dark_circle_blue">#0D1A2E</color>
+
+    <!-- Misc -->
+    <color name="white_alpha_10">#1AFFFFFF</color>
+    <color name="white_alpha_20">#33FFFFFF</color>
+
+    <!-- ════════════════════════════════
+         ICON COLORS (semantic)
+         ════════════════════════════════ -->
+
+    <!-- Dark -->
+    <color name="dark_icon_primary">#F0F0F8</color>
+    <color name="dark_icon_secondary">#8B8BA7</color>
+    <color name="dark_icon_disabled">#4A4A5A</color>
+
+    <!-- Light -->
+    <color name="light_icon_primary">#1A1A2A</color>
+    <color name="light_icon_secondary">#636370</color>
+    <color name="light_icon_disabled">#B0B0C0</color>
+    <!-- ════════════════════════════════
+         LIGHT SURFACE PALETTE  (day mode)
+         ════════════════════════════════ -->
+    <!-- Backgrounds -->
+    <color name="light_bg_app">#FAFAFA</color>            <!-- root screen bg -->
+    <color name="light_bg_surface">#F2F2F7</color>        <!-- toolbar, bottom bar -->
+    <color name="light_bg_card">#FFFFFF</color>           <!-- list item, card -->
+    <color name="light_bg_elevated">#EEF0FF</color>       <!-- dialog, bottom-sheet, AI bubble -->
+    <color name="light_bg_ai_bubble">#EEF0FF</color>      <!-- AI chat bubble -->
+    <color name="light_bg_code">#F4F4F8</color>           <!-- code block -->
+
+    <!-- Input / form -->
+    <color name="light_input_box">#FFFFFF</color>
+    <color name="light_input_stroke">#C5C5D0</color>
+    <color name="light_input_stroke_focused">#6C63FF</color>
+
+    <!-- Chips / tags -->
+    <color name="light_chip_fill">#E8E6FF</color>
+    <color name="light_chip_stroke">#C4C0FF</color>
+
+    <!-- Button fills -->
+    <color name="light_button_fill">#6C63FF</color>
+    <color name="light_button_ghost">#F2F2F7</color>
+
+    <!-- Strokes / dividers -->
+    <color name="light_stroke">#E0E0E8</color>
+    <color name="light_stroke_blue">#BBDEFB</color>
+    <color name="light_stroke_blue2">#90CAF9</color>
+    <color name="light_divider">#EBEBF0</color>
+
+    <!-- Text -->
+    <color name="light_text_primary">#1A1A2A</color>
+    <color name="light_text_secondary">#636370</color>
+    <color name="light_text_hint">#9898A8</color>
+    <color name="light_text_on_brand">#FFFFFF</color>
+    <color name="light_text_ai_label">#534AB7</color>    <!-- "Auto Chat" label in bubble -->
+
+    <!-- Ripple / overlay -->
+    <color name="light_ripple">#E0E0E8</color>
+    <color name="light_scrim">#66000000</color>
+
+    <!-- Player bar -->
+    <color name="light_player_bar">#FFFFFF</color>
+    <color name="light_player_bar_end">#F0EEFF</color>
+    <color name="light_player_text">#1A1A2A</color>
+
+    <!-- Settings sections -->
+    <color name="light_setting_header">#EEF0FF</color>
+    <color name="light_setting_item">#FFFFFF</color>
+    <color name="light_setting_section">#F2F2F7</color>
+
+    <!-- Engine / TTS cards -->
+    <color name="light_engine_card">#F8F8FF</color>
+    <color name="light_engine_card_active">#EEF9FA</color>
+    <color name="light_engine_card_stroke">#E0E0F0</color>
+    <color name="light_tab_container">#F2F2F7</color>
+    <color name="light_tab_active">#FFFFFF</color>
+    <color name="light_circle_blue">#E3F0FB</color>
+
+
+    <!-- ════════════════════════════════
+         SEMANTIC FIXED COLORS
+         (không đổi theo theme)
+         ════════════════════════════════ -->
+    <color name="status_green">#4CAF50</color>
+    <color name="status_green_bg_dark">#0D2A0F</color>
+    <color name="status_green_bg_light">#E8F5E9</color>
+
+    <color name="status_red">#E04A4A</color>
+    <color name="danger_red">#FF4444</color>
+    <color name="danger_bg_dark">#1A0D0D</color>
+    <color name="danger_stroke_dark">#3A1A1A</color>
+    <color name="danger_bg_light">#FFEBEB</color>
+    <color name="danger_stroke_light">#FFCDD2</color>
+
+    <color name="status_yellow">#FFC107</color>
+    <color name="status_yellow_bg_dark">#1A1500</color>
+    <color name="status_yellow_bg_light">#FFF8E1</color>
+
+
+    <!-- ════════════════════════════════
+         WAVE / AUDIO COLORS
+         ════════════════════════════════ -->
+    <color name="wave_played">#AB47BC</color>             <!-- purple_400 -->
+    <color name="wave_unplayed">#33AAAACC</color>         <!-- gray alpha 20% -->
+    <color name="wave_played_light">#6C63FF</color>
+    <color name="wave_unplayed_light">#C5C5D0</color>
+
+
+    <!-- ════════════════════════════════
+         LEGACY ALIASES (backward compat)
+         Giữ lại để không break code cũ,
+         nhưng không nên dùng trong code mới.
+         ════════════════════════════════ -->
+    <color name="background">#0D1117</color>
+    <color name="text_primary">#F0F0F8</color>
+    <color name="text_secondary">#8B8BA7</color>
+    <color name="divider">#30363D</color>
+    <color name="pin_text">#9D99FF</color>
+    <color name="brand_blue">#4A90E2</color>
+    <color name="indigo_400">#5C6BC0</color>
+    <color name="indigo_500">#3F51B5</color>
+    <color name="purple_400">#AB47BC</color>
+    <color name="pink_400">#EC407A</color>
+    <color name="gray_500">#9E9E9E</color>
+    <color name="gray_alpha_20">#33AAAACC</color>
+    <color name="player_bar_gradient">#1A1A2E</color>
+    <color name="player_bar_gradient_end">#2D1B4E</color>
+    <color name="player_text">#E0E0F0</color>
+    <color name="teal_bg">#0D2A2E</color>
+    <color name="teal_stroke">#4D31B1BD</color>
+    <color name="engine_card_bg">#1A1A2E</color>
+    <color name="engine_card_active_bg">#0D2A2E</color>
+    <color name="engine_card_stroke">#2A2A3E</color>
+    <color name="tab_container_bg">#0D0D14</color>
+    <color name="circle_blue_bg">#0D1A2E</color>
+    <color name="overlay_close">#80000000</color>
+    <color name="accent_blue_legacy">#2196F3</color>
+
 </resources>

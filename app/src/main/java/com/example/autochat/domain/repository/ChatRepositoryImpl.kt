@@ -17,6 +17,8 @@ import com.example.autochat.domain.model.ChatSession
 import com.example.autochat.domain.model.MediaItem
 import com.example.autochat.domain.model.Message
 import com.example.autochat.llm.LlmEngine
+import com.example.autochat.llm.LlmEngineFactory
+import com.example.autochat.llm.LlmEngineInterface
 import com.example.autochat.llm.PromptBuilder
 import com.example.autochat.llm.SyncManager
 import com.example.autochat.remote.api.ChatApi
@@ -104,10 +106,12 @@ class ChatRepositoryImpl @Inject constructor(
     private val webSocketManager: WebSocketManager,
     @Named("chat") private val chatRetrofit: Retrofit,
     private val database: AppDatabase,
-    private val llmEngine: LlmEngine,
+    private val engineFactory: LlmEngineFactory,   // ← thêm
+    private val llamaEngineDefault: LlmEngine,
     private val syncManager: SyncManager
 ) : ChatRepository {
-
+    private val llmEngine: LlmEngineInterface
+         get() = engineFactory.getActiveEngine() ?: llamaEngineDefault
     companion object {
         private val ACCESS_TOKEN = stringPreferencesKey("access_token")
     }
@@ -794,12 +798,21 @@ class ChatRepositoryImpl @Inject constructor(
         val botMsg = response.botMessage.toDomain().let { msg ->
             if (response.botDetail != null) msg.copy(extraData = response.botDetail) else msg
         }
+        val userMsg = response.userMessage.toDomain()  // ← thêm dòng này
+
+        // THÊM trước return
+        val sid = response.sessionId
+        val list = messagesCache.getOrPut(sid) { mutableListOf() }
+        if (list.none { it.id == userMsg.id }) list.add(userMsg)
+        if (list.none { it.id == botMsg.id }) list.add(botMsg)
+        list.sortBy { it.timestamp }
+        messagesFlows[sid]?.emit(list.toList())
 
         return ChatRepository.SendMessageResult(
             sessionId    = response.sessionId,
             sessionTitle = response.sessionTitle,
             botMessage   = botMsg,
-            userMessage  = response.userMessage.toDomain()
+            userMessage  = userMsg  // ← dùng userMsg thay vì response.userMessage.toDomain()
         )
     }
 
@@ -879,16 +892,16 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun initRagSession(sessionId: String) {
-        try {
-            val response = chatApi.initRagSession("Bearer ${getAccessToken()}", sessionId)
-            if (!response.isSuccessful) {
-                Log.e("initRagSession", "❌ RAG init failed: ${response.code()}")
-            }
-        } catch (e: Exception) {
-            Log.e("initRagSession", "❌ Network error: ${e.message}")
-        }
-    }
+//    override suspend fun initRagSession(sessionId: String) {
+//        try {
+//            val response = chatApi.initRagSession("Bearer ${getAccessToken()}", sessionId)
+//            if (!response.isSuccessful) {
+//                Log.e("initRagSession", "❌ RAG init failed: ${response.code()}")
+//            }
+//        } catch (e: Exception) {
+//            Log.e("initRagSession", "❌ Network error: ${e.message}")
+//        }
+//    }
     override suspend fun syncBranchToRag(sessionId: String, branchId: String) {
         try {
             val token = getAccessToken()
@@ -993,6 +1006,8 @@ class ChatRepositoryImpl @Inject constructor(
         branchId: String?,
     ): Result<ChatRepository.SendMessageResult> {
         return try {
+            Log.d("OFFLINE_DEBUG", "engine: ${llmEngine::class.simpleName}, loaded: ${llmEngine.isLoaded()}")
+
             if (!llmEngine.isLoaded()) {
                 return Result.failure(Exception("Model chưa được load"))
             }

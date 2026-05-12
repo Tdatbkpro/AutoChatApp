@@ -1,45 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    NHÓM:
+    ① Auth / Login
+    ② Dialog & BottomSheet
+    ③ Chat bubbles
+    ④ Input / TextInputLayout
+    ⑤ Buttons
+    ⑥ Chips / Tags
+    ⑦ Player / Audio bar
+    ⑧ Code block
+    ⑨ Settings
+    ⑩ Animation
+-->
 <resources>
+
+    <!-- ════════════════════════════════
+         ① AUTH / LOGIN
+         ════════════════════════════════ -->
+
+    <!-- Outlined text field – auth screen -->
     <style name="AuthTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-        <item name="boxStrokeColor">#3A3A5E</item>
-        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="boxStrokeColor">?attr/strokeInput</item>
+        <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="boxCornerRadiusBottomEnd">12dp</item>
-        <item name="boxCornerRadiusBottomStart">12dp</item>
-        <item name="boxCornerRadiusTopEnd">12dp</item>
         <item name="boxCornerRadiusTopStart">12dp</item>
-        <item name="hintTextColor">#8B8BA7</item>
-        <item name="android:textColorHint">#6B6B8A</item>
-        <item name="boxBackgroundColor">#1A1A2E</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="hintTextColor">?attr/textHint</item>
+        <item name="android:textColorHint">?attr/textHint2</item>
+        <item name="boxBackgroundColor">?attr/bgInput</item>
+        <item name="errorTextColor">?attr/colorDanger</item>
     </style>
 
-    <style name="DialogTheme" parent="Theme.AppCompat.Light.Dialog">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:backgroundDimEnabled">true</item>
-        <item name="android:backgroundDimAmount">0.7</item>
+    <!-- Dense variant for settings / modals -->
+    <style name="AuthTextInputLayout.Dense" parent="AuthTextInputLayout">
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
     </style>
 
+    <!-- Rounded shape appearance for text inputs -->
     <style name="RoundedTextInput" parent="ShapeAppearance.Material3.SmallComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">12dp</item>
     </style>
 
-    <style name="DialogZoomAnimation" parent="android:Animation">
-        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
-        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+
+    <!-- ════════════════════════════════
+         ② DIALOG & BOTTOM-SHEET
+         ════════════════════════════════ -->
+
+    <style name="DialogTheme" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.65</item>
     </style>
 
-    <!-- ✅ Chỉ giữ 1 định nghĩa duy nhất -->
-    <style name="BottomSheetGitHubTheme" parent="Theme.Design.Light.BottomSheetDialog">
+    <!-- Dark bottom-sheet -->
+    <style name="BottomSheetTheme" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
         <item name="android:windowIsFloating">false</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#0D1117</item>
-        <item name="bottomSheetStyle">@style/GitHubBottomSheet</item>
+        <item name="android:navigationBarColor">?attr/bgSurface</item>
+        <item name="bottomSheetStyle">@style/BottomSheetModalStyle</item>
     </style>
 
-    <style name="GitHubBottomSheet" parent="Widget.Design.BottomSheet.Modal">
+    <!-- Light override -->
+    <style name="BottomSheetTheme.Light" parent="BottomSheetTheme">
+        <item name="android:navigationBarColor">?attr/bgSurface</item>
+    </style>
+
+    <style name="BottomSheetModalStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@drawable/bg_bottom_sheet</item>
     </style>
 
@@ -47,4 +81,309 @@
         <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
         <item name="android:windowExitAnimation">@anim/slide_out_down</item>
     </style>
+
+    <!-- Dialog zoom/slide -->
+    <style name="DialogZoomAnimation" parent="android:Animation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ③ CHAT BUBBLES
+         ════════════════════════════════ -->
+
+    <!-- AI bubble text — "Auto Chat" sender label -->
+    <style name="TextStyle.BubbleLabel">
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/textBubbleAiLabel</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+
+    <!-- AI bubble body text -->
+    <style name="TextStyle.BubbleAiBody">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textBubbleAiBody</item>
+        <item name="android:lineSpacingMultiplier">1.5</item>
+    </style>
+
+    <!-- User bubble body text (always white) -->
+    <style name="TextStyle.BubbleUserBody">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:lineSpacingMultiplier">1.5</item>
+    </style>
+
+    <!-- Timestamp / caption below bubble -->
+    <style name="TextStyle.BubbleCaption">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:alpha">0.75</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ④ INPUT FIELDS
+         ════════════════════════════════ -->
+
+    <!-- Main chat input bar at bottom -->
+    <style name="ChatInputStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">?attr/strokeInput</item>
+        <item name="boxStrokeWidth">0.5dp</item>
+        <item name="boxStrokeWidthFocused">1.5dp</item>
+        <item name="boxCornerRadiusTopStart">24dp</item>
+        <item name="boxCornerRadiusTopEnd">24dp</item>
+        <item name="boxCornerRadiusBottomStart">24dp</item>
+        <item name="boxCornerRadiusBottomEnd">24dp</item>
+        <item name="hintTextColor">?attr/textHint</item>
+        <item name="android:textColorHint">?attr/textHint2</item>
+        <item name="boxBackgroundColor">?attr/bgInput</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑤ BUTTONS
+         ════════════════════════════════ -->
+
+    <!-- Primary filled button -->
+    <style name="ButtonStyle.Primary" parent="Widget.Material3.Button">
+        <item name="android:backgroundTint">?attr/bgButton</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">44dp</item>
+    </style>
+
+    <!-- Ghost / outline button -->
+    <style name="ButtonStyle.Ghost" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:backgroundTint">?attr/bgButtonGhost</item>
+        <item name="strokeColor">?attr/strokeGhBtn</item>
+        <item name="strokeWidth">0.5dp</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">44dp</item>
+    </style>
+
+    <!-- Destructive / danger button -->
+    <style name="ButtonStyle.Danger" parent="Widget.Material3.Button">
+        <item name="android:backgroundTint">?attr/colorDanger</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">44dp</item>
+    </style>
+
+    <!-- Round send / mic button (icon-only) -->
+    <style name="ButtonStyle.Round">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:background">@drawable/bg_action_button</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑥ CHIPS / TAGS
+         ════════════════════════════════ -->
+
+    <style name="ChipStyle.Brand" parent="Widget.Material3.Chip.Suggestion">
+        <item name="chipBackgroundColor">?attr/bgChip</item>
+        <item name="chipStrokeColor">?attr/strokeChip</item>
+        <item name="chipStrokeWidth">0.5dp</item>
+        <item name="android:textColor">?attr/colorBrand</item>
+        <item name="android:textSize">12sp</item>
+        <item name="chipCornerRadius">20dp</item>
+    </style>
+
+    <style name="ChipStyle.Neutral" parent="ChipStyle.Brand">
+        <item name="chipBackgroundColor">?attr/bgCard</item>
+        <item name="chipStrokeColor">?attr/strokeDefault</item>
+        <item name="android:textColor">?attr/textSecondary</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑦ PLAYER / AUDIO BAR
+         ════════════════════════════════ -->
+
+    <style name="PlayerBarStyle">
+        <item name="android:background">@drawable/bg_audio_player</item>
+        <item name="android:elevation">8dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="PlayButtonStyle">
+        <item name="android:background">@drawable/bg_play_button</item>
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
+
+    <style name="PlayerTimeText">
+        <item name="android:textColor">?attr/colorPlayerText</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:alpha">0.9</item>
+    </style>
+
+    <style name="PlayerLabelChip">
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:maxWidth">72dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:alpha">0.85</item>
+        <item name="android:background">@drawable/bg_label_chip</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">3dp</item>
+        <item name="android:paddingBottom">3dp</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑧ CODE BLOCK
+         ════════════════════════════════ -->
+
+    <style name="CodeBlockStyle">
+        <item name="android:background">@drawable/bg_code_block</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <style name="CodeActionBarStyle">
+        <item name="android:background">?attr/bgCodeAction</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑨ SETTINGS
+         ════════════════════════════════ -->
+
+    <style name="SettingsSectionHeader">
+        <item name="android:background">?attr/bgSettingHeader</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/colorBrand</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.07</item>
+    </style>
+
+    <style name="SettingsItem">
+        <item name="android:background">?attr/bgSettingItem</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:minHeight">52dp</item>
+    </style>
+
+    <style name="SettingsItemTitle">
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <style name="SettingsItemSubtitle">
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+    </style>
+
+
+    <!-- ════════════════════════════════
+         ⑩ TYPOGRAPHY SCALES
+         ════════════════════════════════ -->
+
+    <style name="TextStyle.Display">
+        <item name="android:textSize">28sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <style name="TextStyle.TitleLarge">
+        <item name="android:textSize">20sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <style name="TextStyle.TitleMedium">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <style name="TextStyle.Body">
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:lineSpacingMultiplier">1.6</item>
+    </style>
+
+    <style name="TextStyle.BodySecondary" parent="TextStyle.Body">
+        <item name="android:textColor">?attr/textSecondary</item>
+    </style>
+
+    <style name="TextStyle.Caption">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/textSecondary</item>
+    </style>
+
+    <style name="TextStyle.Label">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/colorBrand</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+    <style name="OtpBoxStyle">
+        <item name="android:layout_width">46dp</item>
+        <item name="android:layout_height">56dp</item>
+        <!-- "number" thay vì "numberPassword" → hiện số thật, không ẩn thành dấu chấm -->
+        <item name="android:inputType">number</item>
+        <item name="android:maxLength">1</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:background">@drawable/bg_otp_box_normal</item>
+        <item name="android:cursorVisible">false</item>
+        <item name="android:importantForAutofill">no</item>
+        <!-- Tắt suggestion bar trên bàn phím -->
+        <item name="android:privateImeOptions">nm</item>
+    </style>
+
+    <style name="ImageButton">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:background">@drawable/bg_icon_circle</item>
+    </style>
+    <!-- Host Activity (compact menu, no theme clash) -->
+    <style name="Theme.AutoChat.HostActivity" parent="Theme.MaterialComponents.CompactMenu"/>
+    <style name="TextStyle" parent="TextStyle.Body"/>
+    <style name="ButtonStyle" parent="ButtonStyle.Primary"/>
 </resources>

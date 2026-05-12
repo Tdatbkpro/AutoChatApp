@@ -67,11 +67,7 @@ interface ChatApi {
         @Path("articleId") articleId: Int
     ): Response<ArticleResponse>
 
-    @POST("chat/sessions/{id}/init-rag")
-    suspend fun initRagSession(
-        @Header("Authorization") token: String,
-        @Path("id") sessionId: String
-    ) : Response<Unit>
+
     // Trong file ChatApi.kt
 
     @PATCH("chat/sessions/{session_id}/pin")

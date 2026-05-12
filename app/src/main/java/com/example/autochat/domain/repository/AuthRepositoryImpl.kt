@@ -1,5 +1,7 @@
 package com.example.autochat.domain.repository
 
+import ai.onnxruntime.BuildConfig
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -11,6 +13,11 @@ import com.example.autochat.remote.dto.request.LoginRequest
 import com.example.autochat.remote.dto.request.RefreshRequest
 import com.example.autochat.remote.dto.request.RegisterRequest
 import com.example.autochat.domain.model.User
+import com.example.autochat.remote.dto.request.GoogleAuthRequest
+import com.example.autochat.remote.dto.request.ResetPasswordRequest
+import com.example.autochat.remote.dto.request.SendOtpRequest
+import com.example.autochat.remote.dto.request.VerifyOtpRequest
+import com.example.autochat.ui.phone.adapter.com.example.autochat.token.EncryptedTokenStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
@@ -20,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
+    private val tokenStorage: EncryptedTokenStorage,
     private val dataStore: DataStore<Preferences>
 ) : AuthRepository {
 
@@ -31,80 +39,38 @@ class AuthRepositoryImpl @Inject constructor(
         val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
     }
 
-    override fun getCurrentUserFlow(): Flow<User?> = dataStore.data.map { prefs ->
-        val userId = prefs[USER_ID] ?: return@map null
+    override fun getCurrentUserFlow(): Flow<User?> = dataStore.data.map {
+        // FIX: Đọc từ EncryptedSharedPreferences thay vì DataStore
+        val userId = tokenStorage.getUserId().ifEmpty { return@map null }
         User(
-            id = userId,
-            email = prefs[EMAIL] ?: "",
-            username = prefs[USERNAME] ?: "",
-            accessToken = prefs[ACCESS_TOKEN] ?: "",
-            refreshToken = prefs[REFRESH_TOKEN] ?: ""
+            id           = userId,
+            email        = tokenStorage.getUserEmail(),   // không cần email ở đây
+            username     = tokenStorage.getUsername(),
+            accessToken  = tokenStorage.getAccessToken() ?: return@map null,
+            refreshToken = tokenStorage.getRefreshToken() ?: return@map null
         )
     }
 
     override suspend fun login(email: String, password: String): User {
         val response = authApi.login(LoginRequest(email, password))
-        saveUserToDataStore(
-            userId = response.userId,
-            email = email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
-        // ✅ Cập nhật AppState
-        AppState.currentUserId = response.userId
-        AppState.username = response.username
-        AppState.accessToken = response.accessToken
-        AppState.refreshToken = response.refreshToken
-
-        android.util.Log.e("AUTH", "Login success - userId: ${AppState.currentUserId}")
-
-        return User(
-            id = response.userId,
-            email = email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
+        saveAndUpdateState(response.userId, email, response.username,
+            response.accessToken, response.refreshToken)
+        return User(response.userId, email, response.username,
+            response.accessToken, response.refreshToken)
     }
 
     override suspend fun register(email: String, username: String, password: String): User {
         val response = authApi.register(RegisterRequest(email, username, password))
-        saveUserToDataStore(
-            userId = response.userId,
-            email = email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
-        // ✅ Cập nhật AppState
-        AppState.currentUserId = response.userId
-        AppState.username = response.username
-        AppState.accessToken = response.accessToken
-        AppState.refreshToken = response.refreshToken
-
-        android.util.Log.e("AUTH", "Register success - userId: ${AppState.currentUserId}")
-
-        return User(
-            id = response.userId,
-            email = email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
+        saveAndUpdateState(response.userId, email, response.username,
+            response.accessToken, response.refreshToken)
+        return User(response.userId, email, response.username,
+            response.accessToken, response.refreshToken)
     }
 
     override suspend fun logout() {
-        dataStore.edit { prefs ->
-            prefs.remove(USER_ID)
-            prefs.remove(EMAIL)
-            prefs.remove(USERNAME)
-            prefs.remove(ACCESS_TOKEN)
-            prefs.remove(REFRESH_TOKEN)
-        }
-        // ✅ Clear AppState
+        tokenStorage.clearPhoneTokens()           // ← xóa token mã hóa
+        dataStore.edit { it.clear() }     // ← xóa các prefs khác nếu có
         AppState.logout()
-        android.util.Log.e("AUTH", "Logout - cleared AppState")
     }
 
     override suspend fun generatePin(): String {
@@ -115,63 +81,122 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun verifyPin(pin: String): User {
         val response = authApi.verifyCarPin(ConfirmPinRequest(pin))
-        saveUserToDataStore(
-            userId = response.userId,
-            email = response.email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
-        // ✅ Cập nhật AppState
-        AppState.currentUserId = response.userId
-        AppState.username = response.username
-        AppState.accessToken = response.accessToken
-        AppState.refreshToken = response.refreshToken
-
-        android.util.Log.e("AUTH", "Verify PIN success - userId: ${AppState.currentUserId}")
-
-        return User(
-            id = response.userId,
-            email = response.email,
-            username = response.username,
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken
-        )
+        tokenStorage.saveCarTokens(response.accessToken, response.refreshToken)
+        saveAndUpdateState(response.userId, response.email, response.username,
+            response.accessToken, response.refreshToken)
+        return User(response.userId, response.email, response.username,
+            response.accessToken, response.refreshToken)
     }
+    // AuthRepositoryImpl.kt
+    override suspend fun refreshCarTokenIfNeeded() {
+        val accessToken  = tokenStorage.getCarAccessToken()  ?: throw Exception("No car token")
+        val refreshToken = tokenStorage.getCarRefreshToken() ?: throw Exception("No car refresh token")
 
-    override suspend fun refreshTokenIfNeeded() {
-        val prefs = dataStore.data.first()
-        val refreshToken = prefs[REFRESH_TOKEN] ?: return
+        AppState.accessToken   = accessToken
+        AppState.refreshToken  = refreshToken
+
+        if (!isTokenExpired(accessToken)) return
+
         try {
             val response = authApi.refresh(RefreshRequest(refreshToken))
-            dataStore.edit { prefs ->
-                prefs[ACCESS_TOKEN] = response.accessToken
-            }
-            // ✅ Cập nhật AppState
+            tokenStorage.saveCarTokens(response.accessToken, response.refreshToken)
+            AppState.accessToken = response.accessToken
+        } catch (e: Exception) {
+            tokenStorage.clearCarTokens()  // ← xóa token xe hết hạn
+            throw Exception("Car session expired")
+        }
+    }
+    override suspend fun refreshTokenIfNeeded() {
+        val accessToken = tokenStorage.getAccessToken() ?: throw Exception("No token")
+        val refreshToken = tokenStorage.getRefreshToken() ?: throw Exception("No refresh token")
+
+        AppState.accessToken = accessToken
+        AppState.refreshToken = refreshToken
+        AppState.currentUserId = tokenStorage.getUserId()
+        AppState.username = tokenStorage.getUsername()
+        AppState.userEmail = tokenStorage.getUserEmail()
+
+        if (!isTokenExpired(accessToken)) return
+
+        try {
+            val response = authApi.refresh(RefreshRequest(refreshToken))
+            tokenStorage.saveTokens(response.accessToken, refreshToken)
             AppState.accessToken = response.accessToken
         } catch (e: Exception) {
             logout()
+            throw Exception("Session expired")
+        }
+    }
+
+    private fun isTokenExpired(token: String): Boolean {
+        return try {
+            val payload = token.split(".")[1]
+            val decoded = android.util.Base64.decode(
+                payload, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING
+            )
+            val exp = org.json.JSONObject(String(decoded)).getLong("exp")
+            System.currentTimeMillis() / 1000 > exp - 60
+        } catch (e: Exception) {
+            true
         }
     }
 
     private suspend fun getAccessToken(): String {
-        val prefs = dataStore.data.first()
-        return prefs[ACCESS_TOKEN] ?: throw Exception("Not logged in")
+        // FIX: Đọc từ EncryptedSharedPreferences thay vì DataStore
+        return tokenStorage.getAccessToken() ?: throw Exception("Not logged in")
     }
 
-    private suspend fun saveUserToDataStore(
+    private suspend fun saveAndUpdateState(
         userId: String,
         email: String,
         username: String,
         accessToken: String,
         refreshToken: String
     ) {
-        dataStore.edit { prefs ->
-            prefs[USER_ID] = userId
-            prefs[EMAIL] = email
-            prefs[USERNAME] = username
-            prefs[ACCESS_TOKEN] = accessToken
-            prefs[REFRESH_TOKEN] = refreshToken
+        tokenStorage.saveTokens(accessToken, refreshToken)
+        tokenStorage.saveUserId(userId)
+        tokenStorage.saveUsername(username)
+        tokenStorage.saveUserEmail(email)
+
+        // Cập nhật AppState tập trung một chỗ, không lặp code
+        AppState.currentUserId = userId
+        AppState.username = username
+        AppState.accessToken = accessToken
+        AppState.refreshToken = refreshToken
+        AppState.userEmail = email
+        // FIX: Không log token, chỉ log userId ở debug
+        if (BuildConfig.DEBUG) android.util.Log.d("AUTH", "Auth success: $userId")
+    }
+
+    override suspend fun sendOtp(email: String, purpose: String) {
+        authApi.sendOtp(SendOtpRequest(email, purpose))
+    }
+
+    override suspend fun verifyOtp(email: String, purpose: String, otp: String): VerifyOtpResult {
+        return try {
+            val response = authApi.verifyOtp(VerifyOtpRequest(email, purpose, otp))
+            Log.d("VERIFY_OTP", "Response: $response")
+            if (response.valid) {
+                VerifyOtpResult.Success(resetToken = response.resetToken)
+            } else {
+                VerifyOtpResult.Error(response.message ?: "Lỗi")
+            }
+        } catch (e: Exception) {
+            VerifyOtpResult.Error(e.message ?: "Lỗi xác thực OTP")
         }
+    }
+
+    override suspend fun resetPassword(email: String, resetToken: String, newPassword: String) {
+        authApi.resetPassword(ResetPasswordRequest(email, resetToken, newPassword))
+    }
+
+    override suspend fun loginWithGoogle(idToken: String): User {
+        val response = authApi.googleAuth(GoogleAuthRequest(idToken))
+        saveAndUpdateState(
+            response.userId, response.email, response.username,
+            response.accessToken, response.refreshToken
+        )
+        return User(response.userId, response.email, response.username,
+            response.accessToken, response.refreshToken)
     }
 }

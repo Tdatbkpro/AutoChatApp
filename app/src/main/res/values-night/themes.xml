@@ -1,7 +1,162 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.Autochat" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  res/values-night/themes.xml                                   ║
+    ║                                                                 ║
+    ║  Android tự load file này khi device ở Dark Mode.              ║
+    ║  Chỉ ghi đè những attr CẦN THIẾT — AppTheme base (dark)        ║
+    ║  đã đúng rồi nên file này thực ra chỉ cần đảm bảo              ║
+    ║  windowLightStatusBar = false và navigationBar đúng màu.        ║
+    ║                                                                 ║
+    ║  Nếu user dùng AppCompatDelegate để force dark/light thủ công  ║
+    ║  thì file này KHÔNG được gọi — AppTheme.Light được dùng thay.  ║
+    ╚══════════════════════════════════════════════════════════════════╝
+-->
+<resources>
+
+    <!--
+        AppTheme base ở values/themes.xml đã là DARK đầy đủ.
+        values-night chỉ cần override những thứ mà DayNight parent
+        có thể tự thay đổi (statusBar, navigationBar light/dark flag).
+    -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- ── Material3 system colors — DARK (enforce lại) ── -->
+        <item name="colorPrimary">@color/brand_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/brand_purple_muted</item>
+        <item name="colorOnPrimaryContainer">@color/brand_purple_light</item>
+        <item name="colorSecondary">@color/teal_primary</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSurface">@color/dark_bg_surface</item>
+        <item name="colorOnSurface">@color/dark_text_primary</item>
+        <item name="colorSurfaceVariant">@color/dark_bg_card</item>
+        <item name="android:colorBackground">@color/dark_bg_app</item>
+        <item name="colorOnBackground">@color/dark_text_primary</item>
+        <item name="colorError">@color/status_red</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/dark_bg_surface</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- ── bg attrs — DARK ── -->
+        <item name="bgApp">@color/dark_bg_app</item>
+        <item name="bgSurface">@color/dark_bg_surface</item>
+        <item name="bgCard">@color/dark_bg_card</item>
+        <item name="bgElevated">@color/dark_bg_elevated</item>
+        <item name="bgBottomSheet">@color/dark_bg_surface</item>
+        <item name="bgScrim">@color/dark_scrim</item>
+        <item name="bgInput">@color/dark_input_box</item>
+        <item name="bgEditField">@color/dark_bg_app</item>
+        <item name="bgChip">@color/dark_chip_fill</item>
+        <item name="bgButton">@color/brand_purple</item>
+        <item name="bgButtonGhost">@color/dark_button_ghost</item>
+        <item name="bgAvatar">@color/brand_purple</item>
+        <item name="bgBadge">@color/dark_bg_elevated</item>
+        <item name="bgCodeBlock">@color/dark_bg_code</item>
+        <item name="bgCodeAction">@color/dark_bg_card</item>
+        <item name="bgDialog">@color/dark_bg_elevated</item>
+        <item name="bgEndpointPill">@color/dark_bg_elevated</item>
+        <item name="bgEndpointPillPressed">@color/dark_bg_card</item>
+        <item name="bgCircle">@color/dark_bg_elevated</item>
+        <item name="bgCircleDark">@color/dark_bg_elevated</item>
+        <item name="bgCircleBlue">@color/dark_circle_blue</item>
+        <item name="bgCircleRed">@color/danger_red</item>
+        <item name="bgDescriptionBar">@color/dark_bg_elevated</item>
+        <item name="bgDrawerHeader">@color/dark_bg_elevated</item>
+        <item name="bgDrawerHeaderEnd">@color/dark_bg_surface</item>
+        <item name="bgGhBtn">@color/dark_bg_card</item>
+        <item name="bgGhBtnPressed">@color/dark_chip_fill</item>
+        <item name="bgErrorSurface">@color/dark_bg_elevated</item>
+        <item name="bgDanger">@color/danger_bg_dark</item>
+
+
+
+        <!-- ── Chat bubble attrs — DARK ── -->
+        <item name="bgBubbleAi">@color/dark_bg_ai_bubble</item>
+        <item name="bgBubbleUser">@color/brand_purple</item>
+        <item name="strokeBubbleAi">@color/dark_stroke_blue</item>
+        <item name="textBubbleAiLabel">@color/dark_text_ai_label</item>
+        <item name="textBubbleAiBody">@color/dark_text_primary</item>
+        <item name="textBubbleUser">@color/white</item>
+
+        <!-- ── Stroke attrs — DARK ── -->
+        <item name="strokeDefault">@color/dark_stroke</item>
+        <item name="strokeBlue">@color/dark_stroke_blue</item>
+        <item name="strokeBlue2">@color/dark_stroke_blue2</item>
+        <item name="strokeChip">@color/dark_chip_stroke</item>
+        <item name="strokeInput">@color/dark_input_stroke</item>
+        <item name="strokeInputFocused">@color/brand_purple</item>
+        <item name="strokeAvatar">@color/white</item>
+        <item name="strokeCode">@color/dark_stroke</item>
+        <item name="strokeDialog">@color/dark_stroke</item>
+        <item name="strokeEditField">@color/brand_purple</item>
+        <item name="strokeEndpointPill">@color/dark_stroke_blue</item>
+        <item name="strokeGhBtn">@color/dark_stroke</item>
+        <item name="strokeGhBtnPressed">@color/accent_blue</item>
+        <item name="strokeError">@color/status_red</item>
+        <item name="strokeCircle">@color/dark_stroke</item>
+        <item name="strokeDanger">@color/danger_stroke_dark</item>
+
+        <!-- ── Text attrs — DARK ── -->
+        <item name="textPrimary">@color/dark_text_primary</item>
+        <item name="textSecondary">@color/dark_text_secondary</item>
+        <item name="textHint">@color/dark_text_secondary</item>
+        <item name="textHint2">@color/dark_text_hint</item>
+        <item name="textPin">@color/accent_blue</item>
+
+        <!-- ── Interactive — DARK ── -->
+        <item name="rippleColor">@color/dark_ripple</item>
+        <item name="colorBrand">@color/brand_purple</item>
+        <item name="colorBrandSoft">@color/brand_purple_dark</item>
+        <item name="colorDestructive">@color/status_red</item>
+        <item name="colorDanger">@color/danger_red</item>
+        <item name="dividerColor">@color/dark_divider</item>
+        <item name="colorSuccess">@color/status_green</item>
+        <item name="colorWarning">@color/status_yellow</item>
+        <item name="colorInfo">@color/accent_blue</item>
+
+        <!-- ── TTS / Engine — DARK ── -->
+        <item name="bgEngineCard">@color/dark_engine_card</item>
+        <item name="bgEngineCardActive">@color/dark_engine_card_active</item>
+        <item name="strokeEngineCard">@color/dark_engine_card_stroke</item>
+        <item name="strokeEngineActive">@color/teal_primary</item>
+        <item name="textEngineActive">@color/teal_primary</item>
+        <item name="bgTabContainer">@color/dark_tab_container</item>
+        <item name="bgTabActive">@color/dark_tab_active</item>
+        <item name="bgBadgeTeal">@color/teal_bg_dark</item>
+        <item name="strokeBadgeTeal">@color/teal_stroke_dark</item>
+        <item name="colorTeal">@color/teal_primary</item>
+        <item name="colorTealDark">@color/teal_dark</item>
+
+        <!-- ── Player bar — DARK ── -->
+        <item name="colorPlayerBar">@color/dark_player_bar</item>
+        <item name="colorPlayerBarBorder">@color/dark_stroke</item>
+        <item name="colorPlayButtonStart">@color/brand_purple</item>
+        <item name="colorPlayButtonEnd">@color/teal_primary</item>
+        <item name="colorPlayerText">@color/dark_player_text</item>
+        <item name="colorPlayerChipBg">@color/dark_bg_elevated</item>
+
+        <!-- ── Settings — DARK ── -->
+        <item name="bgSettingHeader">@color/dark_setting_header</item>
+        <item name="bgSettingItem">@color/dark_setting_item</item>
+        <item name="bgSettingSection">@color/dark_setting_section</item>
+
+        <!-- ── Child theme refs ── -->
+        <item name="bottomSheetDialogTheme">@style/BottomSheetTheme</item>
+        <item name="android:dialogTheme">@style/DialogTheme</item>
+
+        <item name="iconColor">@color/dark_icon_primary</item>
+        <item name="iconColorPrimary">@color/dark_icon_primary</item>
+        <item name="iconColorSecondary">@color/dark_icon_secondary</item>
+        <item name="iconColorDisabled">@color/dark_icon_disabled</item>
+        <item name="iconColorActive">@color/brand_purple_light</item>
+        <item name="iconColorBrand">@color/brand_purple</item>
+        <item name="iconColorDanger">@color/danger_red</item>
+        <item name="iconColorSuccess">@color/status_green</item>
+        <item name="iconColorOnBrand">@color/white</item>
+        <item name="bgDangerSurface">@color/danger_bg_dark</item>
+        <item name="textDanger">@color/status_red</item>
     </style>
+
 </resources>

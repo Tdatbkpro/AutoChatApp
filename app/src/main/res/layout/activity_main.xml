@@ -12,13 +12,6 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-<!--        <androidx.appcompat.widget.Toolbar-->
-<!--            android:id="@+id/toolbar"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="?attr/actionBarSize"-->
-<!--            android:background="?attr/colorPrimary"-->
-<!--            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />-->
-
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/navHostFragment"
             android:name="androidx.navigation.fragment.NavHostFragment"
@@ -35,14 +28,14 @@
         android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="#16162A">
+        android:background="?attr/bgSurface">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Header Section với Gradient đẹp -->
+            <!-- Header Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -73,7 +66,7 @@
                         android:text="K"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="#FFFFFF" />
+                        android:textColor="?attr/iconColorOnBrand" />
                 </FrameLayout>
 
                 <TextView
@@ -81,7 +74,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Khách"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif-medium" />
@@ -90,7 +83,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="AutoChat AI"
-                    android:textColor="#8B8BA7"
+                    android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp" />
 
@@ -112,10 +105,10 @@
                     android:layout_weight="1"
                     android:text="+ Chat mới"
                     android:textSize="13sp"
-                    android:textColor="#FFFFFF"
-                    android:backgroundTint="#6C63FF"
+                    android:textColor="?attr/iconColorOnBrand"
+                    android:backgroundTint="?attr/colorBrand"
                     app:icon="@drawable/ic_add"
-                    app:iconTint="#FFFFFF"
+                    app:iconTint="?attr/iconColorOnBrand"
                     app:iconSize="18dp"
                     app:cornerRadius="22dp"
                     android:insetTop="0dp"
@@ -124,7 +117,7 @@
 
             </LinearLayout>
 
-            <!-- Search Bar Modern -->
+            <!-- Search Bar -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -132,7 +125,7 @@
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#1E1E3E">
+                app:cardBackgroundColor="?attr/bgCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -153,8 +146,8 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:hint="Tìm kiếm..."
-                        android:textColor="#E0E0F0"
-                        android:textColorHint="#5A5A7A"
+                        android:textColor="?attr/textPrimary"
+                        android:textColorHint="?attr/textHint2"
                         android:textSize="13sp"
                         android:background="@null"
                         android:paddingHorizontal="8dp"
@@ -187,14 +180,14 @@
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#2D2D4E" />
+                    android:background="?attr/dividerColor" />
 
                 <TextView
                     android:id="@+id/tvSessionsTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Lịch sử"
-                    android:textColor="#5A5A7A"
+                    android:textColor="?attr/textHint2"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.05"
@@ -204,7 +197,7 @@
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#2D2D4E" />
+                    android:background="?attr/dividerColor" />
 
             </LinearLayout>
 
@@ -249,7 +242,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Cài đặt"
-                        android:textColor="#CCCCDD"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <ImageView
@@ -264,7 +257,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="v1.0.0"
-                    android:textColor="#3A3A5A"
+                    android:textColor="?attr/textHint2"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:layout_marginTop="8dp" />

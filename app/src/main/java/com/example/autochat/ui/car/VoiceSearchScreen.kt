@@ -6,6 +6,8 @@ import androidx.car.app.model.*
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.autochat.AppState
+import com.example.autochat.di.ChatEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 
 class VoiceSearchScreen(
     carContext: CarContext,
@@ -13,6 +15,9 @@ class VoiceSearchScreen(
     private val botMessage: String?,
     private val onFinished: (() -> Unit)? = null
 ) : Screen(carContext) {
+
+    // THÊM MỚI: callback để HomeScreen tự xử lý navigation
+    var onResultFromHome: ((String) -> Unit)? = null
 
     private var displayText = "Dang nghe...\nHay noi cau hoi cua ban"
     private var useVoiceMode = true
@@ -127,38 +132,50 @@ class VoiceSearchScreen(
         }
     }
 
-    /**
-     * Điểm duy nhất xử lý "có kết quả" — dù từ voice hay keyboard.
-     *
-     * Thứ tự QUAN TRỌNG:
-     * 1. Kiểm tra đang trong ChatSessionScreen chưa
-     * 2a. NẾU đang trong session → addPendingMessage ngay, rồi pop VoiceScreen,
-     *     API call chạy ngầm trong MyChatScreen
-     * 2b. NẾU chưa có session → push ChatSessionScreen (với pendingMessage),
-     *     rồi pop VoiceScreen khỏi stack (ChatSession ở dưới sẽ hiện),
-     *     API call chạy ngầm
-     *
-     * KHÔNG gọi screenManager.pop() trước addUserMessage vì push/pop
-     * trên cùng một ScreenManager là synchronous với back-stack —
-     * pop trước sẽ khiến push sau đổ lên sai màn hình.
-     */
     private fun sendAndNavigate(text: String) {
+        android.util.Log.d("VOICE_FLOW", "sendAndNavigate: text=$text")
+        android.util.Log.d("VOICE_FLOW", "onResultFromHome=$onResultFromHome")
+        android.util.Log.d("VOICE_FLOW", "existingSession=${chatScreen.currentChatSessionScreen}")
+        // THÊM MỚI: nếu có callback từ HomeScreen → dùng nó, không tự push
+        val homeCallback = onResultFromHome
+        if (homeCallback != null) {
+            screenManager.pop()
+            homeCallback(text)
+            return
+        }
+
         val existingSession = chatScreen.currentChatSessionScreen
 
         if (existingSession != null) {
-            // ── Đang trong ChatSessionScreen ──────────────────────────────
-            // 1. Hiện pending ngay trên session screen
             existingSession.addPendingMessage(text)
-            // 2. Pop voice screen → user thấy ChatSessionScreen với spinner
             screenManager.pop()
-            // 3. Gửi API (không cần push screen mới)
             chatScreen.sendMessageOnly(text, botMessage)
         } else {
-            // ── Chưa có session, đang ở HomeScreen ───────────────────────
+            val canSendOnline = AppState.isConnectServer
+            val factory = EntryPointAccessors.fromApplication(
+                carContext.applicationContext,
+                ChatEntryPoint::class.java
+            ).llmEngineFactory()
+            val llmEngine = factory.getActiveEngine()
+            val canSendOffline = llmEngine != null && llmEngine.isLoaded()
+
+            if (!canSendOnline && !canSendOffline) {
+                screenManager.pop()
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    carContext.let {
+                        androidx.car.app.CarToast.makeText(
+                            it,
+                            "Mất kết nối, chưa có model offline",
+                            androidx.car.app.CarToast.LENGTH_LONG
+                        ).show()
+                    }
+                }, 300)
+                return
+            }
+
             val endpoint = AppState.currentEndpoint
             val sessionId = AppState.currentSession?.id ?: "pending_${System.currentTimeMillis()}"
 
-            // 1. Tạo ChatSessionScreen với pending message hiển thị ngay
             val sessionScreen = ChatSessionScreen(
                 carContext     = carContext,
                 chatScreen     = chatScreen,
@@ -168,13 +185,8 @@ class VoiceSearchScreen(
             )
             chatScreen.currentChatSessionScreen = sessionScreen
 
-            // 2. Push ChatSessionScreen (user thấy pending ngay lập tức)
             screenManager.pop()
-
-            // PUSH SAU - thêm ChatSessionScreen
             screenManager.push(sessionScreen)
-
-            // 4. Gửi API ngầm
             chatScreen.sendMessageOnly(text, botMessage)
         }
     }

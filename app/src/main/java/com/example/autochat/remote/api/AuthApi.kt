@@ -1,9 +1,14 @@
 package com.example.autochat.remote.api
 
 import com.example.autochat.remote.dto.request.ConfirmPinRequest
+import com.example.autochat.remote.dto.request.GoogleAuthRequest
 import com.example.autochat.remote.dto.request.LoginRequest
 import com.example.autochat.remote.dto.request.RefreshRequest
 import com.example.autochat.remote.dto.request.RegisterRequest
+import com.example.autochat.remote.dto.request.ResetPasswordRequest
+import com.example.autochat.remote.dto.request.SendOtpRequest
+import com.example.autochat.remote.dto.request.VerifyOtpRequest
+import com.example.autochat.remote.dto.response.OtpResponse
 import com.example.autochat.remote.dto.response.PinResponse
 import com.example.autochat.remote.dto.response.TokenResponse
 import retrofit2.http.*
@@ -27,4 +32,18 @@ interface AuthApi {
     // ✅ Xe gọi để xác thực PIN → nhận JWT
     @POST("auth/car/verify-pin")
     suspend fun verifyCarPin(@Body req: ConfirmPinRequest): TokenResponse
+
+    // Thêm vào interface AuthApi:
+
+    @POST("auth/send-otp")
+    suspend fun sendOtp(@Body request: SendOtpRequest)
+
+    @POST("auth/verify-otp")
+    suspend fun verifyOtp(@Body request: VerifyOtpRequest) : OtpResponse
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest)
+
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): TokenResponse
 }

@@ -23,6 +23,9 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import androidx.core.net.toUri
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MyCarAppService : CarAppService() {
 
@@ -58,26 +61,37 @@ class MyCarAppService : CarAppService() {
 
         override fun onCreateScreen(intent: Intent): Screen {
             var isLoggedIn = false
+
             runBlocking {
                 try {
-                    val authRepo = EntryPointAccessors.fromApplication(
+                    val tokenStorage = EntryPointAccessors.fromApplication(
                         applicationContext, ChatEntryPoint::class.java
-                    ).authRepository()
-                    val user = authRepo.getCurrentUserFlow().firstOrNull()
-                    if (user != null && user.accessToken.isNotEmpty()) {
-                        AppState.accessToken   = user.accessToken
-                        AppState.refreshToken  = user.refreshToken
-                        AppState.currentUserId = user.id
-                        AppState.username      = user.username
-                        isLoggedIn = true
-                        Log.d("CAR_DEBUG", "Restored user: ${user.id}")
-                    } else {
+                    ).tokenStorage()
 
+                    val carToken        = tokenStorage.getCarAccessToken()
+                    val carRefreshToken = tokenStorage.getCarRefreshToken()
+
+                    if (!carToken.isNullOrEmpty() && !carRefreshToken.isNullOrEmpty()) {
+                        val authRepo = EntryPointAccessors.fromApplication(
+                            applicationContext, ChatEntryPoint::class.java
+                        ).authRepository()
+
+                        try {
+                            authRepo.refreshCarTokenIfNeeded()
+                            isLoggedIn = true
+                        } catch (e: Exception) {
+                            Log.w("CAR_DEBUG", "Car token expired: ${e.message}")
+                            isLoggedIn = false
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("CAR_DEBUG", "Auth error: ${e.message}")
                 }
             }
+
+            // Lắng nghe session expired
+
+
             return if (isLoggedIn) {
                 chatScreen = MyChatScreen(carContext)
                 AppState.chatScreen = chatScreen

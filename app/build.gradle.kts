@@ -1,3 +1,5 @@
+
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,7 +7,9 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
+    id("androidx.navigation.safeargs.kotlin")
 }
+
 
 android {
     namespace = "com.example.autochat"
@@ -23,6 +27,10 @@ android {
                 cppFlags += ""
             }
         }
+        ndk {
+                        abiFilters += listOf("arm64-v8a", "x86_64")
+                        // ONNX Runtime chưa publish armeabi-v7a → bỏ ra
+                    }
     }
 
     ndkVersion = "26.1.10909125"
@@ -45,7 +53,9 @@ android {
     buildFeatures {
         viewBinding = true
         dataBinding = true
+        buildConfig = true
     }
+
 }
 
 kotlin {
@@ -116,6 +126,12 @@ dependencies {
     implementation("io.noties.markwon:image:4.6.2")
     implementation("ru.noties:jlatexmath-android:0.2.0")
 
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
 }
 
